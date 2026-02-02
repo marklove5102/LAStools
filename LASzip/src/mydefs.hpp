@@ -261,6 +261,8 @@ typedef union U64F64 {
 #define strdup_las(string) strdup(string);
 #endif
 
+
+
 #define ENDIANSWAP16(n) (((((U16)n) << 8) & 0xFF00) | ((((U16)n) >> 8) & 0x00FF))
 
 #define ENDIANSWAP32(n)                                                                                                                              \
@@ -472,6 +474,8 @@ inline I64 ftell_las(FILE* file) {
 #endif
 }
 
+
+
 /// Reads file information (size, time, permissions) across platforms as a 64-bit compatible function
 inline int stat_las(const char* path, las_stat_t* buf) {
 #if defined(_WIN32) && !defined(__MINGW32__)
@@ -592,6 +596,17 @@ BOOL file_exists(const std::string& path);
 
 /// Get the digits 
 I32 get_digits(F64 scale_factor); 
+
+/// Inline template function for resetting and filling an ostringstream
+template <typename... Args>
+inline void set_oss_content(std::ostringstream& oss, Args&&... args) {
+  // delete content and reset status flags
+  oss.str("");
+  oss.clear();
+
+  // merge content
+  (oss << ... << std::forward<Args>(args));
+}
 
 /// Checks at runtime whether the system stores its multi-byte numbers in little-endian format in memory
 namespace Endian {
