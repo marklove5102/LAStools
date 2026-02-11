@@ -24,7 +24,7 @@
   
   CHANGE HISTORY:
   
-     21 January 2026 -- The tool has been renewed and version 1.5 check added, as well as json output
+     21 January 2026 -- The tool has been renewed. LAS version 1.5 check, as well as json and text output format added
      2 August 2015 -- not failing but warning if OCG WRT has intentional empty payload 
     12 April 2015 -- not failing but warning for certain empty VLR payloads 
     20 March 2015 -- fail on files containing zero point records
@@ -34,6 +34,16 @@
   
 ===============================================================================
 */
+#include "mydefs.hpp"
+#include "lastool.hpp"
+#include "lasreader.hpp"
+#include "laswriter.hpp"
+#include "geoprojectionconverter.hpp"
+#include "lasvalidationresult.hpp"
+#include "validate_writer.hpp"
+#include "format_writer_factory.hpp" 
+#include "lascheck.hpp"
+#include "lasdefinitions.hpp"
 
 #include <cstdint>
 #include <time.h>
@@ -41,16 +51,6 @@
 #include <stdlib.h>
 #include <string.h>
 #include <fstream>
-
-#include "mydefs.hpp"
-#include "lastool.hpp"
-#include "lasreader.hpp"
-#include "laswriter.hpp"
-#include "geoprojectionconverter.hpp"
-#include "lasvalidationresult.hpp"
-#include "xmlwriter.hpp"
-#include "lascheck.hpp"
-#include "lasdefinitions.hpp"
 
 #define VALIDATE_VERSION  260128
 
@@ -76,20 +76,14 @@ class LasTool_lasvalidate : public LasTool {
   }
 };
 
-static void write_version(XMLwriter& xmlwriter)
-{
+static void write_version(ValidateWriter* writer) {
   std::ostringstream version_oss;
   version_oss << "lasvalidate (" << VALIDATE_VERSION << ") built with LAStools version " << LAS_TOOLS_VERSION;
 
-  std::string version = version_oss.str();
-
-  xmlwriter.begin("version");
-  xmlwriter.write(version);
-  xmlwriter.end("version");
+  writer->write("version", version_oss.str());
 }
 
-static void write_command_line(XMLwriter& xmlwriter, int argc, char *argv[])
-{
+static std::string get_command_line(int argc, char* argv[]) {
   std::ostringstream command_line_oss;
   for (int i = 0; i < argc; i++) {
     if (!argv[i]) continue;
@@ -102,15 +96,10 @@ static void write_command_line(XMLwriter& xmlwriter, int argc, char *argv[])
       command_line_oss << argv[i];
   }
 
-  std::string command_line = command_line_oss.str();
-
-  xmlwriter.begin("command_line");
-  xmlwriter.write(command_line);
-  xmlwriter.end("command_line");
+  return command_line_oss.str();
 }
 
-static double taketime()
-{
+static double taketime() {
   return (double)(clock())/CLOCKS_PER_SEC;
 }
 
@@ -120,14 +109,13 @@ extern void lasvalidate_multi_core(
     BOOL cpu64);
 #endif
 
-int main(int argc, char *argv[])
-{
+int main(int argc, char *argv[]) {
   LasTool_lasvalidate lastool;
   lastool.init(argc, argv, "lasvalidate");
   size_t i = 0;
   double start_time = 0.0;
   double full_start_time = 0.0;
-  std::string xml_output_file;
+  FILE* file_out = stderr;
   BOOL no_CRS_fail = FALSE;
   F64 tile_size = 0.0;
   BOOL one_report_per_file = FALSE;
@@ -135,19 +123,13 @@ int main(int argc, char *argv[])
   U32 num_fail = 0;
   U32 num_warning = 0;
 
-  //fprintf(stderr, "This is version %d of the LAS validator. Please contact\n", VALIDATE_VERSION);
-  //fprintf(stderr, "me at 'martin.isenburg@rapidlasso.com' if you disagree with\n");
-  //fprintf(stderr, "validation reports, want additional checks, or find bugs as\n");
-  //fprintf(stderr, "the software is still under development. Your feedback will\n");
-  //fprintf(stderr, "help to finish it sooner.\n");
-
-  //LAShistogram lashistogram;
   LASreadOpener lasreadopener;
   GeoProjectionConverter geoprojectionconverter;
   LASwriteOpener laswriteopener;
 
-  if (argc == 1)
-  {
+  std::string command_line = get_command_line(argc, argv);
+
+  if (argc == 1) {
 #ifdef COMPILE_WITH_GUI
     lasvalidate_gui(argc, argv, 0);
 #else
@@ -160,17 +142,18 @@ int main(int argc, char *argv[])
       file_name.pop_back();
     }
     lasreadopener.set_file_name(file_name.c_str());
-    //laswriteopener.set_file_name(file_name);
-    xml_output_file = std::string(file_name);
 #endif
   } else {
     for (i = 1; i < argc; i++) {
       if ((unsigned char)argv[i][0] == 0x96) argv[i][0] = '-';
     }
-    //if (!lashistogram.parse(argc, argv)) byebye();
     lasreadopener.parse(argc, argv);
     geoprojectionconverter.parse(argc, argv);
     laswriteopener.parse(argc, argv);
+  }
+
+  if (laswriteopener.is_piped()) {
+    file_out = stdout;
   }
 
   auto arg_local = [&](int& i) -> bool {
@@ -180,7 +163,10 @@ int main(int argc, char *argv[])
       byebye();
     } else if (strcmp(argv[i],"-h") == 0 || strcmp(argv[i],"-help") == 0) {
       lasreadopener.usage();
-    } else*/ if (strcmp(argv[i],"-lof") == 0) {
+    } */ 
+    if (strcmp(argv[i], "-quiet") == 0) {
+      file_out = nullptr;
+    } else if (strcmp(argv[i], "-lof") == 0) {
       if ((i+1) >= argc)
       {
         laserror("'%s' needs 1 argument: list_of_files", argv[i]);
@@ -201,14 +187,17 @@ int main(int argc, char *argv[])
         }
       }
       i += 1;
-    } else if (strcmp(argv[i],"-o") == 0) {
-      i++;
-      xml_output_file = std::string(argv[i]);
-    } else if (strcmp(argv[i],"-oxml") == 0) {
-      one_report_per_file = TRUE;
-    } else if (strcmp(argv[i],"-no_CRS_fail") == 0) {
+    } if (strcmp(argv[i], "-otxt") == 0) {
+      laswriteopener.set_format("txt");
+    } else if (strcmp(argv[i], "-oxml") == 0) {
+      laswriteopener.set_format("xml");
+    } else if (strcmp(argv[i], "-ojs") == 0) {
+      laswriteopener.set_format("json");
+    } else if (strcmp(argv[i], "-no_CRS_fail") == 0) {
       no_CRS_fail = TRUE;
-    } else if (strcmp(argv[i],"-tile_size") == 0) {
+    } else if (strcmp(argv[i], "-report_per_file") == 0) {
+      one_report_per_file = TRUE;
+    } else if (strcmp(argv[i], "-tile_size") == 0) {
       if ((i+1) >= argc)
       {
         laserror("'%s' needs at least 1 argument: tile size", argv[i]);
@@ -246,39 +235,18 @@ int main(int argc, char *argv[])
     laserror("no input specified");
   }
 
-  // output logging
-
-  XMLwriter xmlwriter;
-
-  if (!xml_output_file.empty())
-  {
-    one_report_per_file = FALSE;
-  }
-  else if (!one_report_per_file)
-  {
-    xml_output_file = "validate.xml";
-  }
-
-  // maybe we are doing one summary report
-
-  if (!xml_output_file.empty())
-  {
-    if (!xmlwriter.open(xml_output_file, "LASvalidator"))
-    {
-      laserror("The LAS validator does not have write permission to the specified output directory");
-    }
-  }
-
   // accumulated pass
 
   ValidationStatus total_pass = ValidationStatus::passed;
+  BOOL first_report = TRUE;
 
   full_start_time = taketime();
 
   // possibly loop over multiple input files
 
-  while (lasreadopener.active())
-  {
+  ValidateWriter* writer = nullptr;
+
+  while (lasreadopener.active()) {
     try {
       start_time = taketime();
       
@@ -293,137 +261,151 @@ int main(int argc, char *argv[])
       // get a pointer to the header
       LASheader* lasheader = &lasreader->header;
       ValidationResult results;
-      
+    
       // maybe we are doing one report per file
       
-      if (one_report_per_file)
-      {
-        std::string current_xml_output_file = lasreadopener.get_file_name();
-        // if decimal_digits > 8, fall back to old function without scale
-        if (current_xml_output_file.size() >= 4) {
-          current_xml_output_file.replace(current_xml_output_file.size() - 4, 4, "_LVS.xml");
+      if (one_report_per_file == TRUE || first_report == TRUE) {
+        if (laswriteopener.get_file_name() == 0) {
+          if (lasreadopener.get_file_name() &&
+              ((laswriteopener.get_format() == LAS_TOOLS_FORMAT_TXT || laswriteopener.get_format() == LAS_TOOLS_FORMAT_JSON ||
+                laswriteopener.get_format() == LAS_TOOLS_FORMAT_XML))) {
+            laswriteopener.make_file_name(lasreadopener.get_file_name(), -2);
+          }
+        }
+
+        if (laswriteopener.get_file_name()) {
+          // make sure we do not corrupt the input file
+          if (lasreadopener.get_file_name() && (strcmp(lasreadopener.get_file_name(), laswriteopener.get_file_name()) == 0)) {
+            laserror("input and output file name for '%s' are identical", lasreadopener.get_file_name());
+          }
+          // open the text output file
+          file_out = LASfopen(laswriteopener.get_file_name(), "w");
+          if (file_out == nullptr) {
+            LASMessage(LAS_WARNING, "could not open output text file '%s'", laswriteopener.get_file_name());
+            file_out = stderr;
+          }
+        }
+
+        // output logging
+
+        writer = FormatWriterFactory::createWriter(laswriteopener.get_format(), file_out);
+
+        if (file_out != nullptr) writer->open("LASvalidator");
+        first_report = FALSE;
+      }
+
+      if (file_out != nullptr) {
+     
+        // start a new report
+        
+        LASMessage(LAS_VERBOSE, "start the full report");
+        writer->begin("report");
+        
+        // report description of file
+        
+        writer->beginsub("file");
+        writer->write("name", lasreadopener.get_file_name_only());
+        writer->write("path", lasreadopener.get_file_name_base());
+        std::string version = std::to_string(static_cast<int>(lasheader->version_major)) + "." + std::to_string(static_cast<int>(lasheader->version_minor));
+        writer->write("version", version.c_str());
+        std::string system_identifier = lasheader->system_identifier;
+        writer->write("system_identifier", system_identifier.c_str());
+        std::string generating_software = lasheader->generating_software;
+        writer->write("generating_software", generating_software.c_str());
+        writer->write("point_data_format", static_cast<int>(lasheader->point_data_format));
+        
+        std::string crsdescription = "not valid or not specified";
+        
+        if (lasheader != nullptr) {
+          // header was loaded. now parse and check.
+        
+          LAScheck lascheck(lasheader, &geoprojectionconverter);
+        
+          LASMessage(LAS_VERY_VERBOSE, "start with the point validation");
+        
+          while (lasreader->read_point()) {
+            lascheck.check_parse(&lasreader->point, results);
+          }
+
+          LASMessage(LAS_VERY_VERBOSE, "start with the header validation");
+        
+          // check header and points and get CRS description
+        
+          lascheck.check(results, crsdescription, no_CRS_fail);
+        }
+        
+        writer->write("CRS", crsdescription);
+        writer->endsub("file");    
+        
+        // report the verdict
+        
+        writer->write("summary", (results.status == ValidationStatus::passed ? "pass" : ((results.status == ValidationStatus::failed) ? "fail" : "warning")));
+        
+        // report details (if necessary)
+        LASMessage(LAS_VERBOSE, "write the report details");
+        
+        if (results.status != ValidationStatus::passed) {
+          writer->beginsub("details");
+          for (i = 0; i < results.fail_messages.size(); ++i) {
+            const ValidationMessage& msg = results.fail_messages[i];
+            writer->write(msg.key.c_str(), "fail", msg.note.c_str());
+          }
+          for (i = 0; i < results.warning_messages.size(); ++i) {
+            const ValidationMessage& msg = results.warning_messages[i];
+            writer->write(msg.key.c_str(), "warning", msg.note.c_str());
+          }
+          writer->endsub("details");
+          if (results.status == ValidationStatus::failed) {
+            total_pass = ValidationStatus::failed;
+          } else if (results.status == ValidationStatus::warning && total_pass == ValidationStatus::passed) {
+            total_pass = ValidationStatus::warning;
+          }
+          if (results.status == ValidationStatus::failed) {
+            num_fail++;
+          } else {
+            num_warning++;
+          }
         } else {
-          // fallback
-          current_xml_output_file += "_LVS.xml";
+          num_pass++;
         }
-        if (!xmlwriter.open(current_xml_output_file, "LASvalidator"))
-        {
-          laserror("The LAS validator does not have write permission to the specified output directory");
+        
+        // end the report
+        
+        writer->end("report");
+        
+        // maybe we are doing one report per file
+        
+        if (one_report_per_file) {
+          // report the total verdict
+        
+          writer->begin("total");
+          writer->write("result", (total_pass == ValidationStatus::passed ? "pass" : (total_pass == ValidationStatus::failed ? "fail" : "warning")));
+          writer->beginsub("details");
+          writer->write("pass", num_pass);
+          writer->write("warning", num_warning);
+          writer->write("fail", num_fail);
+          writer->endsub("details");
+          writer->end("total");
+        
+          num_pass = 0;
+          num_warning = 0;
+          num_fail = 0;
+        
+          // write which validator was used
+        
+          write_version(writer);
+        
+          // write which command line was used
+        
+          writer->write("command_line", command_line);
+        
+          // close the LASvalidator XML output file
+
+          writer->end("LASvalidator");
+
+          if (file_out && (file_out != stdout) && (file_out != stderr)) fclose(file_out);
+          laswriteopener.set_file_name(nullptr);
         }
-      }
-      
-      // start a new report
-      
-      xmlwriter.begin("report");
-      
-      // report description of file
-      
-      xmlwriter.beginsub("file");
-      xmlwriter.write("name", lasreadopener.get_file_name_current());
-      xmlwriter.write("path", lasreadopener.get_file_name_base());
-      std::string version = std::to_string(lasheader->version_major) + "." + std::to_string(lasheader->version_minor);
-      xmlwriter.write("version", version);
-      std::string system_identifier = lasheader->system_identifier;
-      xmlwriter.write("system_identifier", system_identifier.c_str());
-      std::string generating_software = lasheader->generating_software;
-      xmlwriter.write("generating_software", generating_software.c_str());
-      xmlwriter.write("point_data_format", lasheader->point_data_format);
-      
-      std::string crsdescription = "not valid or not specified";
-      
-      if (lasheader != nullptr)
-      {
-        // header was loaded. now parse and check.
-      
-        LAScheck lascheck(lasheader);
-      
-        while (lasreader->read_point())
-        {
-          lascheck.check_parse(&lasreader->point, results);
-        }
-      
-        // check header and points and get CRS description
-      
-        lascheck.check(results, crsdescription, no_CRS_fail);
-      }
-      
-      xmlwriter.write("CRS", crsdescription);
-      xmlwriter.endsub("file");    
-      
-      // report the verdict
-      
-      xmlwriter.beginsub("summary");
-      xmlwriter.write((results.status == ValidationStatus::passed ? "pass" : ((results.status == ValidationStatus::failed) ? "fail" : "warning")));
-      xmlwriter.endsub("summary");
-      
-      // report details (if necessary)
-      
-      if (results.status != ValidationStatus::passed)
-      {
-        xmlwriter.beginsub("details");
-        for (i = 0; i < results.fail_messages.size(); ++i)
-        {
-          const ValidationMessage& msg = results.fail_messages[i];
-          xmlwriter.write(msg.key.c_str(), "fail", msg.note.c_str());
-        }
-        for (i = 0; i < results.warning_messages.size(); ++i) {
-          const ValidationMessage& msg = results.warning_messages[i];
-          xmlwriter.write(msg.key.c_str(), "warning", msg.note.c_str());
-        }
-        xmlwriter.endsub("details");
-        if (results.status == ValidationStatus::failed) {
-          total_pass = ValidationStatus::failed;
-        } else if (results.status == ValidationStatus::warning && total_pass == ValidationStatus::passed) {
-          total_pass = ValidationStatus::warning;
-        }
-        if (results.status == ValidationStatus::failed)
-        {
-          num_fail++;
-        }
-        else
-        {
-          num_warning++;
-        }
-      }
-      else
-      {
-        num_pass++;
-      }
-      
-      // end the report
-      
-      xmlwriter.end("report");
-      
-      // maybe we are doing one report per file
-      
-      if (one_report_per_file)
-      {
-        // report the total verdict
-      
-        xmlwriter.begin("total");
-        xmlwriter.write((total_pass == ValidationStatus::passed ? "pass" : (total_pass == ValidationStatus::failed ? "fail" : "warning")));
-        xmlwriter.beginsub("details");
-        xmlwriter.write("pass", num_pass);
-        xmlwriter.write("warning", num_warning);
-        xmlwriter.write("fail", num_fail);
-        xmlwriter.endsub("details");
-        xmlwriter.end("total");
-      
-        num_pass = 0;
-        num_warning = 0;
-        num_fail = 0;
-      
-        // write which validator was used
-      
-        write_version(xmlwriter);
-      
-        // write which command line was used
-      
-        write_command_line(xmlwriter, argc, argv);
-      
-        // close the LASvalidator XML output file
-      
-        xmlwriter.close("LASvalidator");
       }
       
       lasreader->close();
@@ -439,31 +421,35 @@ int main(int argc, char *argv[])
 
   // maybe we are doing one summary report
 
-  if (!one_report_per_file)
-  {
+  if (!one_report_per_file) {
     // report the total verdict
 
-    xmlwriter.begin("total");
-    xmlwriter.write((total_pass == ValidationStatus::passed ? "pass" : (total_pass == ValidationStatus::failed ? "fail" : "warning")));
-    xmlwriter.beginsub("details");
-    xmlwriter.write("pass", num_pass);
-    xmlwriter.write("warning", num_warning);
-    xmlwriter.write("fail", num_fail);
-    xmlwriter.endsub("details");
-    xmlwriter.end("total");
+    writer->begin("total");
+    writer->write("result", (total_pass == ValidationStatus::passed ? "pass" : (total_pass == ValidationStatus::failed ? "fail" : "warning")));
+    writer->beginsub("details");
+    writer->write("pass", num_pass);
+    writer->write("warning", num_warning);
+    writer->write("fail", num_fail);
+    writer->endsub("details");
+    writer->end("total");
 
     // write which validator was used
 
-    write_version(xmlwriter);
+    write_version(writer);
 
     // write which command line was used
 
-    write_command_line(xmlwriter, argc, argv);
+    writer->write("command_line", command_line);
 
-    // close the LASvalidator XML output file
+    // close the LASvalidator XML file
 
-    xmlwriter.close("LASvalidator");
+    writer->end("LASvalidator");
+
+    if (file_out && (file_out != stdout) && (file_out != stderr)) fclose(file_out);
+    laswriteopener.set_file_name(nullptr);
   }
+  delete writer;
+
   if (lasreadopener.get_file_name_number() > 1) {
     LASMessage(LAS_VERBOSE, "done. total time %.2f sec. total %s (pass=%d,warning=%d,fail=%d)", taketime() - full_start_time,
         (total_pass == ValidationStatus::passed ? "pass" : (total_pass == ValidationStatus::failed ? "fail" : "warning")), 

@@ -33,7 +33,6 @@
 #include <string.h>
 #include <math.h>
 
-#include "geoprojectionconverter.hpp"
 #include "crscheck.hpp"
 
 namespace crs {
@@ -14455,6 +14454,8 @@ BOOL CRScheck::check_geokeys(std::string& description) {
 void CRScheck::check(ValidationResult& results, std::string& description, BOOL no_CRS_fail) {
   if (lasheader->vlr_geo_keys || lasheader->vlr_geo_ogc_wkt)
   {
+    LASMessage(LAS_VERBOSE, "start with the CRS validation");
+
     if (lasheader->vlr_geo_keys)
     {
       if (!check_geokeys(description))
@@ -14491,37 +14492,39 @@ void CRScheck::check(ValidationResult& results, std::string& description, BOOL n
         }
       }
     }
-    if (lasheader->vlr_geo_ogc_wkt)
-    {
-      if (lasheader->vlr_geo_ogc_wkt == lasheader->file_signature)
-      {
-        if ((projections[0]) && (projections[0]->type != crs::CRS_PROJECTION_NONE))
-        {
+    if (lasheader->vlr_geo_ogc_wkt) {
+      if (lasheader->vlr_geo_ogc_wkt == lasheader->file_signature) {
+        if ((projections[0]) && (projections[0]->type != crs::CRS_PROJECTION_NONE)) {
           set_oss_content(note_oss, "inconsistency. GEOTIFF tags specify CRS but OGC WKT claims it's intentionally *not* specified");
-          if (no_CRS_fail)
-          {
+          if (no_CRS_fail) {
             results.add_warning("CRS", note_oss.str());
-          }
-          else
-          {
+          } else {
             results.add_fail("CRS", note_oss.str());
           }
-        }
-        else
-        {
+        } else {
           set_oss_content(note_oss, "Coordinate Reference System was intentionally not specified (according to the empty OGC WKT)");
           results.add_warning("CRS", note_oss.str());
         }
-      }
-      else
-      {
+      } else if (geoprojectionconverter != nullptr && load_proj_library(nullptr, false) == true) {
+        // try to use proj lib if loadable
+        if (geoprojectionconverter->is_proj_wkt_valid(lasheader->vlr_geo_ogc_wkt) == false) {
+          set_oss_content(note_oss, "invalid OGC WKT: object is not a valid Coordinate Reference System");
+          if (no_CRS_fail) {
+            results.add_warning("CRS", note_oss.str());
+          } else {
+            results.add_fail("CRS", note_oss.str());
+          }
+        } else {
+          std::string crs_name = geoprojectionconverter->get_proj_crs_name_from_wkt(lasheader->vlr_geo_ogc_wkt);
+
+          if (!crs_name.empty()) description = crs_name;
+        }
+      } else {
         set_oss_content(note_oss, "there is a OGC WKT string but its check is not yet implemented");
         results.add_warning("CRS", note_oss.str());
       }
     }
-  }
-  else
-  {
+  } else {
     set_oss_content(note_oss, "neither GEOTIFF tags nor OGC WKT specify Coordinate Reference System");
     if (no_CRS_fail)
     {
@@ -14532,15 +14535,62 @@ void CRScheck::check(ValidationResult& results, std::string& description, BOOL n
       results.add_fail("CRS", note_oss.str());
     }
   }
+
+  // Check CRS spezifikation GEOTIFF or OCG WKT CRS depending on the las minor version
+
+  if (lasheader->version_minor >= 4) {
+    // an OCG WKT CRS specification
+    if (lasheader->vlr_geo_ogc_wkt == nullptr) {
+      set_oss_content(note_oss, "file with LAS version 1.", static_cast<int>(lasheader->version_minor),
+          " expects specification of a Coordinate Reference System with OGC WKT sting");
+      if (no_CRS_fail) {
+        results.add_warning("CRS", note_oss.str());
+      } else {
+        results.add_fail("CRS", note_oss.str());
+      }
+    }
+    // a GEOTIFF tag CRS specification
+    if (lasheader->vlr_geo_keys != nullptr) {
+      set_oss_content(note_oss, "file with LAS version 1.", static_cast<int>(lasheader->version_minor),
+          " does not specify a Coordinate Reference System with GEOTIFF tags");
+      if (no_CRS_fail) {
+        results.add_warning("CRS", note_oss.str());
+      } else {
+        results.add_fail("CRS", note_oss.str());
+      }
+    }
+  } else {
+    // an OCG WKT CRS specification
+    if (lasheader->vlr_geo_ogc_wkt != nullptr) {
+      set_oss_content(note_oss, "file with LAS version 1.", static_cast<int>(lasheader->version_minor),
+          " does not specify Coordinate Reference System with OGC WKT string");
+      if (no_CRS_fail) {
+        results.add_warning("CRS", note_oss.str());
+      } else {
+        results.add_fail("CRS", note_oss.str());
+      }
+    }
+    // a GEOTIFF tag CRS specification
+    if (lasheader->vlr_geo_keys == nullptr) {
+      set_oss_content(note_oss, "file with LAS version 1.", static_cast<int>(lasheader->version_minor),
+          " expects specification of a Coordinate Reference System with GEOTIFF tags");
+      if (no_CRS_fail) {
+        results.add_warning("CRS", note_oss.str());
+      } else {
+        results.add_fail("CRS", note_oss.str());
+      }
+    }
+  }
 }
 
-CRScheck::CRScheck(const LASheader* lasheader) {
+CRScheck::CRScheck(const LASheader* lasheader, GeoProjectionConverter* geoprojectionconverter) {
   coordinate_units[0] = coordinate_units[1] = 0;
   elevation_units[0] = elevation_units[1] = 0;
   vertical_epsg[0] = vertical_epsg[1] = 0;
   ellipsoids[0] = ellipsoids[1] = 0;
   projections[0] = projections[1] = 0;
   this->lasheader = lasheader;
+  this->geoprojectionconverter = geoprojectionconverter;
 };
 
 CRScheck::~CRScheck()
@@ -14549,4 +14599,6 @@ CRScheck::~CRScheck()
   if (ellipsoids[1]) delete ellipsoids[1];
   if (projections[0]) delete projections[0];
   if (projections[1]) delete projections[1];
+  this->lasheader = nullptr;
+  this->geoprojectionconverter = nullptr;
 };

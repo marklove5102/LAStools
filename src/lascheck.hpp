@@ -37,6 +37,7 @@
 #include "lasdefinitions.hpp"
 #include "lasutility.hpp"
 #include "lasvalidationresult.hpp"
+#include "geoprojectionconverter.hpp"
 #include <array>
 
 constexpr std::array<double, 25> allowed_scale_factors = {1.0, 0.1, 0.01, 0.001, 0.0001, 0.00001, 0.000001, 0.0000001, 0.00000001, 
@@ -53,14 +54,16 @@ public:
   void check_parse(const LASpoint* laspoint, ValidationResult& results);
   void check(ValidationResult& results, std::string& crsdescription, BOOL no_CRS_fail = FALSE, F64 tile_size = 0.0);
 
-  LAScheck(const LASheader* lasheader);
+  LAScheck(const LASheader* lasheader, GeoProjectionConverter* geoprojectionconverter);
   ~LAScheck();
 
 private:
   const LASheader *lasheader;
+  GeoProjectionConverter *geoprojectionconverter;
   F64 min_x, min_y, min_z;
   F64 max_x, max_y, max_z;
   I64 points_outside_bounding_box;
+  I64 points_outside_gps_time_range;
   LASinventory lasinventory;
   LASsummary lassummary;
   std::ostringstream problem_oss;

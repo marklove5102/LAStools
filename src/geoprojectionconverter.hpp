@@ -496,6 +496,8 @@ public:
   void set_proj_crs_with_json(const char* json_filename, bool source = true);
   void set_proj_crs_with_wkt(const char* wkt_filename, bool source = true);
   void set_proj_crs_with_file_header_wkt(const char* wktContent, bool source = true);
+  bool is_proj_wkt_valid(const char* wktContent);
+  std::string get_proj_crs_name_from_wkt(const char* wktContent);
   void get_wkt_from_proj(CHAR*& ogc_wkt_out, GeoProjectionConverter& geoprojectionconverter, LASreader* lasreader);
    
   // helps us to find the 'pcs.csv' file

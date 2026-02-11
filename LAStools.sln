@@ -93,6 +93,11 @@ EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "lasziplib", "LASzip\liblaszip_static.vcxproj", "{28E29AE8-ECC4-4189-A2F4-A72F33D119A2}"
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "lasvalidate", "src\lasvalidate.vcxproj", "{28A9D226-B798-4DDD-BD45-CB23224ECF09}"
+	ProjectSection(ProjectDependencies) = postProject
+		{5FADA97F-05B1-4344-885E-237265DE911A} = {5FADA97F-05B1-4344-885E-237265DE911A}
+		{A8B9E496-9847-423A-9672-F650E5E46828} = {A8B9E496-9847-423A-9672-F650E5E46828}
+		{28E29AE8-ECC4-4189-A2F4-A72F33D119A2} = {28E29AE8-ECC4-4189-A2F4-A72F33D119A2}
+	EndProjectSection
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

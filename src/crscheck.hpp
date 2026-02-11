@@ -36,6 +36,7 @@
 
 #include "lasutility.hpp"
 #include "lasvalidationresult.hpp"
+#include "geoprojectionconverter.hpp"
 
 class CRSprojectionEllipsoid
 {
@@ -113,7 +114,7 @@ class CRScheck
 {
 public:
   void check(ValidationResult& results, std::string& description, BOOL no_CRS_fail = FALSE);
-  CRScheck(const LASheader* lasheader);
+  CRScheck(const LASheader* lasheader, GeoProjectionConverter* geoprojectionconverter);
   ~CRScheck();
 
 private:
@@ -123,6 +124,7 @@ private:
   CRSprojectionEllipsoid* ellipsoids[2];
   CRSprojectionParameters* projections[2];
   const LASheader* lasheader;
+  GeoProjectionConverter* geoprojectionconverter;
   std::ostringstream problem_oss;
   std::ostringstream note_oss;
 
