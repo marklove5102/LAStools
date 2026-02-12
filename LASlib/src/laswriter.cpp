@@ -1115,11 +1115,18 @@ BOOL LASwriteOpener::format_was_specified() const
   return specified;
 }
 
-static const CHAR* LAS_TOOLS_FORMAT_NAMES[12] = {"las", "las", "laz", "bin", "qi", "wrl", "txt", "shp", "asc", "bil", "flt", "json"};
+static const CHAR* LAS_TOOLS_FORMAT_NAMES[15] = {"las", "las", "laz", "bin", "qi", "wrl", "txt", "shp", "ply", "asc", "bil", "flt", "dtm", "json", "xml"};
 
 const CHAR* LASwriteOpener::get_format_name() const
 {
-  return LAS_TOOLS_FORMAT_NAMES[get_format()];
+  I32 idx = get_format();
+  constexpr int num_formats = sizeof(LAS_TOOLS_FORMAT_NAMES) / sizeof(LAS_TOOLS_FORMAT_NAMES[0]);
+
+  if (idx >= 0 && idx < num_formats) {
+    return LAS_TOOLS_FORMAT_NAMES[idx];
+  } else {
+    return "unknown";
+  }
 }
 
 I32 LASwriteOpener::get_format() const

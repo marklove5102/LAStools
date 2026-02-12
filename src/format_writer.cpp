@@ -1,11 +1,11 @@
 /*
 ===============================================================================
 
-  FILE:  format_writer_factory.hpp
+  FILE:  format_writer.cpp
 
   CONTENTS:
 
-    Creates a suitable ValidateWriter depending on the selected format (XML, TXT, JSON) and initialises it with the transferred FILE* resource.
+    see corresponding header file
 
   PROGRAMMERS:
 
@@ -24,22 +24,25 @@
 
   CHANGE HISTORY:
 
-    5 February 2026 -- created
+    see corresponding header file
 
 ===============================================================================
 */
 
-#ifndef FORMAT_VALIDATION_WRITER_FACTORY_HPP
-#define FORMAT_VALIDATION_WRITER_FACTORY_HPP
+#include "format_writer.hpp"
+#include "validate_xml_writer.hpp"
+#include "validate_json_writer.hpp"
+#include "validate_txt_writer.hpp"
+#include "lasdefinitions.hpp"
 
-#include "mydefs.hpp"
-#include "validate_writer.hpp"
-
-#include <stdio.h>
-
-class FormatWriterFactory {
- public:
-  static ValidateWriter* createWriter(I32 format, FILE* file);
-};
-
-#endif
+ValidateWriter* FormatWriterFactory::createWriter(I32 format, FILE* file) {
+  switch (format) {
+    case LAS_TOOLS_FORMAT_XML:
+      return new ValidteXmlWriter(file);
+    case LAS_TOOLS_FORMAT_TXT:
+      return new ValidateTxtWriter(file);
+    default :
+      return new ValidateJsonWriter(file);  
+  }
+  return nullptr; 
+}

@@ -204,15 +204,23 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="crscheck.cpp" />
+    <ClCompile Include="format_writer.cpp" />
     <ClCompile Include="lascheck.cpp" />
     <ClCompile Include="lasvalidate.cpp" />
-    <ClCompile Include="xmlwriter.cpp" />
+    <ClCompile Include="validate_json_writer.cpp" />
+    <ClCompile Include="validate_txt_writer.cpp" />
+    <ClCompile Include="validate_writer.cpp" />
+    <ClCompile Include="validate_xml_writer.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="crscheck.hpp" />
+    <ClInclude Include="format_writer.hpp" />
     <ClInclude Include="lascheck.hpp" />
-    <ClInclude Include="lasvalidationresult.hpp" />
-    <ClInclude Include="xmlwriter.hpp" />
+    <ClInclude Include="lasvalidate_result.hpp" />
+    <ClInclude Include="validate_json_writer.hpp" />
+    <ClInclude Include="validate_txt_writer.hpp" />
+    <ClInclude Include="validate_writer.hpp" />
+    <ClInclude Include="validate_xml_writer.hpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

@@ -34,6 +34,7 @@ BOOL ValidteXmlWriter::is_open() const {
   return (BOOL)(file != nullptr);
 }
 
+/// Initializes the writer and opens the root element/container identified by the given key
 BOOL ValidteXmlWriter::open(const std::string& key) {
   if (file == nullptr) return FALSE;
 
@@ -45,14 +46,7 @@ BOOL ValidteXmlWriter::open(const std::string& key) {
   return TRUE;
 }
 
-//BOOL ValidteXmlWriter::open(const std::string& key) {
-//  if (file == nullptr) return FALSE;
-//
-//  fprintf(file, "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n");
-//  fprintf(file, "<%s>\n", key.c_str());
-//  return TRUE;
-//}
-
+/// Begins a new structured section identified by the given key and makes it the current write context
 BOOL ValidteXmlWriter::begin(const std::string& key) {
   if (file == nullptr) return FALSE;
 
@@ -62,33 +56,12 @@ BOOL ValidteXmlWriter::begin(const std::string& key) {
   return TRUE;
 }
 
-//BOOL ValidteXmlWriter::begin(const std::string& key) {
-//  if (file == nullptr) return FALSE;
-//  fprintf(file, "  <%s>\n", key.c_str());
-//  return TRUE;
-//}
-
+/// Begins a sub-section within the current section and makes it the active write context
 BOOL ValidteXmlWriter::beginsub(const std::string& key) {
   return begin(key);
-  /*if (file == nullptr) return FALSE;
-
-  printIndent();
-  fprintf(file, "<%s>\n", key.c_str());
-  indent++;
-  return TRUE;*/
 }
 
-//BOOL ValidteXmlWriter::beginsub(const std::string& key) {
-//  if (file == nullptr) return FALSE;
-//  if (sub)
-//  {
-//    return FALSE;
-//  }
-//  sub = TRUE;
-//  fprintf(file, "    <%s>\n", key.c_str());
-//  return TRUE;
-//}
-
+/// Writes a simple value into the current context
 BOOL ValidteXmlWriter::write(const std::string& value) {
   if (file == nullptr) return FALSE;
 
@@ -97,19 +70,7 @@ BOOL ValidteXmlWriter::write(const std::string& value) {
   return TRUE;
 }
 
-//BOOL ValidteXmlWriter::write(const std::string& value) {
-//  if (file == nullptr) return FALSE;
-//  if (sub)
-//  {
-//    fprintf(file, "      %s\n", value.c_str());
-//  }
-//  else
-//  {
-//    fprintf(file, "    %s\n", value.c_str());
-//  }
-//  return TRUE;
-//}
-
+/// Writes a numeric value into the current context
 BOOL ValidteXmlWriter::write(I32 value) {
   if (file == nullptr) return FALSE;
 
@@ -118,19 +79,7 @@ BOOL ValidteXmlWriter::write(I32 value) {
   return TRUE;
 }
 
-//BOOL ValidteXmlWriter::write(I32 value) {
-//  if (file == nullptr) return FALSE;
-//  if (sub)
-//  {
-//    fprintf(file, "      %d\n", value);
-//  }
-//  else
-//  {
-//    fprintf(file, "    %d\n", value);
-//  }
-//  return TRUE;
-//}
-
+/// Writes a key-value pair into the current context
 BOOL ValidteXmlWriter::write(const std::string& key, const std::string& value) {
   if (file == nullptr) return FALSE;
 
@@ -139,19 +88,7 @@ BOOL ValidteXmlWriter::write(const std::string& key, const std::string& value) {
   return TRUE;
 }
 
-//BOOL ValidteXmlWriter::write(const std::string& key, const std::string& value) {
-//  if (file == nullptr) return FALSE;
-//  if (sub)
-//  {
-//    fprintf(file, "      <%s>%s</%s>\n", key.c_str(), value.c_str(), key.c_str());
-//  }
-//  else
-//  {
-//    fprintf(file, "    <%s>%s</%s>\n", key.c_str(), value.c_str(), key.c_str());
-//  }
-//  return TRUE;
-//}
-
+/// Writes a numeric key-value pair into the current context
 BOOL ValidteXmlWriter::write(const std::string& key, I32 value) {
   if (file == nullptr) return FALSE;
 
@@ -160,19 +97,7 @@ BOOL ValidteXmlWriter::write(const std::string& key, I32 value) {
   return TRUE;
 }
 
-//BOOL ValidteXmlWriter::write(const std::string& key, I32 value) {
-//  if (file == nullptr) return FALSE;
-//  if (sub)
-//  {
-//    fprintf(file, "      <%s>%d</%s>\n", key.c_str(), value, key.c_str());
-//  }
-//  else
-//  {
-//    fprintf(file, "    <%s>%d</%s>\n", key.c_str(), value, key.c_str());
-//  }
-//  return TRUE;
-//}
-
+/// Writes a structured entry consisting of a variable identifier and optional descriptive note under the given key
 BOOL ValidteXmlWriter::write(const std::string& variable, const std::string& key, const std::string& note) {
   if (file == nullptr) return FALSE;
 
@@ -194,53 +119,12 @@ BOOL ValidteXmlWriter::write(const std::string& variable, const std::string& key
   return TRUE;
 }
 
-//BOOL ValidteXmlWriter::write(const std::string& variable, const std::string& key, const std::string& note) {
-//  if (file == nullptr) return FALSE;
-//  if (sub)
-//  {
-//    fprintf(file, "      <%s>\n", key.c_str());
-//    fprintf(file, "        <variable>%s</variable>\n", variable.c_str());
-//    if (!note.empty())
-//    {
-//      fprintf(file, "        <note>%s</note>\n", note.c_str());
-//    }
-//    fprintf(file, "      </%s>\n", key.c_str());
-//  }
-//  else
-//  {
-//    fprintf(file, "    <%s>\n", key.c_str());
-//    fprintf(file, "      <variable>%s</variable>\n", variable.c_str());
-//    if (!note.empty())
-//    {
-//      fprintf(file, "      <note>%s</note>\n", note.c_str());
-//    }
-//    fprintf(file, "    </%s>\n", key.c_str());
-//  }
-//  return TRUE;
-//}
-
+/// Closes the current sub-section and restores the previous write context
 BOOL ValidteXmlWriter::endsub(const std::string& key) {
-  /*if (file == nullptr) return FALSE;
-
-  indent--;
-  printIndent();
-  fprintf(file, "</%s>\n", key.c_str());
-  return TRUE;*/
-
   return end(key);
 }
 
-//BOOL ValidteXmlWriter::endsub(const std::string& key) {
-//  if (file == nullptr) return FALSE;
-//  if (!sub)
-//  {
-//    return FALSE;
-//  }
-//  sub = FALSE;
-//  fprintf(file, "    </%s>\n", key.c_str());
-//  return TRUE;
-//}
-
+/// Closes the current section and restores the parent context; finalizes output if the root section is closed
 BOOL ValidteXmlWriter::end(const std::string& key) {
   if (file == nullptr) return FALSE;
 
@@ -249,9 +133,3 @@ BOOL ValidteXmlWriter::end(const std::string& key) {
   fprintf(file, "</%s>\n", key.c_str());
   return TRUE;
 }
-
-//BOOL ValidteXmlWriter::end(const std::string& key) {
-//  if (file == nullptr) return FALSE;
-//  fprintf(file, "  </%s>\n", key.c_str());
-//  return TRUE;
-//}

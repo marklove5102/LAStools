@@ -24,7 +24,7 @@
 
   CHANGE HISTORY:
 
-    1 April 2013 -- on Easter Monday all-nighting in Perth airport for PER->SYD
+    6 February 2026 -- created
 
 ===============================================================================
 */
@@ -56,8 +56,6 @@ class ValidateTxtWriter : public ValidateWriter {
 
  private:
   bool inSub = false;
-
-  //void printIndent();
 };
 
 #endif

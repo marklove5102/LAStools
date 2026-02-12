@@ -39,9 +39,9 @@
 #include "lasreader.hpp"
 #include "laswriter.hpp"
 #include "geoprojectionconverter.hpp"
-#include "lasvalidationresult.hpp"
+#include "lasvalidate_result.hpp"
 #include "validate_writer.hpp"
-#include "format_writer_factory.hpp" 
+#include "format_writer.hpp" 
 #include "lascheck.hpp"
 #include "lasdefinitions.hpp"
 
@@ -187,12 +187,6 @@ int main(int argc, char *argv[]) {
         }
       }
       i += 1;
-    } if (strcmp(argv[i], "-otxt") == 0) {
-      laswriteopener.set_format("txt");
-    } else if (strcmp(argv[i], "-oxml") == 0) {
-      laswriteopener.set_format("xml");
-    } else if (strcmp(argv[i], "-ojs") == 0) {
-      laswriteopener.set_format("json");
     } else if (strcmp(argv[i], "-no_CRS_fail") == 0) {
       no_CRS_fail = TRUE;
     } else if (strcmp(argv[i], "-report_per_file") == 0) {
@@ -204,6 +198,9 @@ int main(int argc, char *argv[]) {
       }
       i++;
       tile_size = atof(argv[i]);
+    } else if ((argv[i][0] != '-') && (lasreadopener.get_file_name_number() == 0)) {
+      lasreadopener.add_file_name(argv[i]);
+      argv[i][0] = '\0';
     } else {
       return false;
     }

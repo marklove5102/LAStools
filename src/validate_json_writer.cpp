@@ -37,6 +37,7 @@ BOOL ValidateJsonWriter::is_open() const {
   return (BOOL)(file != nullptr);
 }
 
+/// Initializes the writer and opens the root element/container identified by the given key
 BOOL ValidateJsonWriter::open(const std::string& key) {
   if (file == nullptr) return FALSE;
 
@@ -47,6 +48,7 @@ BOOL ValidateJsonWriter::open(const std::string& key) {
   return TRUE;
 }
 
+/// Begins a new structured section identified by the given key and makes it the current write context
 BOOL ValidateJsonWriter::begin(const std::string& key) {
   if (file == nullptr || stack.empty()) return FALSE;
 
@@ -64,6 +66,7 @@ BOOL ValidateJsonWriter::begin(const std::string& key) {
   return TRUE;
 }
 
+/// Begins a sub-section within the current section and makes it the active write context
 BOOL ValidateJsonWriter::beginsub(const std::string& key) {
   if (file == nullptr || stack.empty()) return FALSE;
 
@@ -81,6 +84,7 @@ BOOL ValidateJsonWriter::beginsub(const std::string& key) {
   return TRUE;
 }
 
+/// Writes a simple value into the current context
 BOOL ValidateJsonWriter::write(const std::string& value) {
   if (file == nullptr || stack.empty()) return FALSE;
 
@@ -92,6 +96,7 @@ BOOL ValidateJsonWriter::write(const std::string& value) {
   return TRUE;
 }
 
+/// Writes a numeric value into the current context
 BOOL ValidateJsonWriter::write(I32 value) {
   if (file == nullptr || stack.empty()) return FALSE;
 
@@ -103,6 +108,7 @@ BOOL ValidateJsonWriter::write(I32 value) {
   return TRUE;
 }
 
+/// Writes a key-value pair into the current context
 BOOL ValidateJsonWriter::write(const std::string& key, const std::string& value) {
   if (file == nullptr || stack.empty()) return FALSE;
 
@@ -111,6 +117,7 @@ BOOL ValidateJsonWriter::write(const std::string& key, const std::string& value)
   return TRUE;
 }
 
+/// Writes a numeric key-value pair into the current context
 BOOL ValidateJsonWriter::write(const std::string& key, I32 value) {
   if (file == nullptr || stack.empty()) return FALSE;
 
@@ -119,6 +126,7 @@ BOOL ValidateJsonWriter::write(const std::string& key, I32 value) {
   return TRUE;
 }
 
+/// Writes a structured entry consisting of a variable identifier and optional descriptive note under the given key
 BOOL ValidateJsonWriter::write(const std::string& variable, const std::string& key, const std::string& note) {
   if (file == nullptr || stack.empty()) return FALSE;
 
@@ -139,6 +147,7 @@ BOOL ValidateJsonWriter::write(const std::string& variable, const std::string& k
   return TRUE;
 }
 
+/// Closes the current sub-section and restores the previous write context
 BOOL ValidateJsonWriter::endsub(const std::string& key) {
   if (file == nullptr || stack.size() <= 1) return FALSE;
 
@@ -146,6 +155,7 @@ BOOL ValidateJsonWriter::endsub(const std::string& key) {
   return TRUE;
 }
 
+/// Closes the current section and restores the parent context; finalizes output if the root section is closed
 BOOL ValidateJsonWriter::end(const std::string& key) {
   if (file == nullptr || stack.empty()) return FALSE;
 

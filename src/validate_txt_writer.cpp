@@ -30,16 +30,11 @@
 */
 #include "validate_txt_writer.hpp"
 
-//void ValidateTxtWriter::printIndent() {
-//  for (int i = 0; i < indent; ++i) {
-//    fprintf(file, "  ");  // 2 spaces per level
-//  }
-//}
-
 BOOL ValidateTxtWriter::is_open() const {
   return (BOOL)(file != nullptr);
 }
 
+/// Initializes the writer and opens the root element/container identified by the given key
 BOOL ValidateTxtWriter::open(const std::string& key) {
   if (file == nullptr) return FALSE;
 
@@ -50,6 +45,7 @@ BOOL ValidateTxtWriter::open(const std::string& key) {
   return TRUE;
 }
 
+/// Begins a new structured section identified by the given key and makes it the current write context
 BOOL ValidateTxtWriter::begin(const std::string& key) {
   if (file == nullptr) return FALSE;
 
@@ -60,18 +56,12 @@ BOOL ValidateTxtWriter::begin(const std::string& key) {
   return TRUE;
 }
 
+/// Begins a sub-section within the current section and makes it the active write context
 BOOL ValidateTxtWriter::beginsub(const std::string& key) {
-  //if (file == nullptr || inSub) return FALSE;
-
-  //printIndent();
-  //fprintf(file, "%s:\n", key.c_str());
-  //indent++;
-  //inSub = true;
-  //return TRUE;
-
   return begin(key);
 }
 
+/// Writes a simple value into the current context
 BOOL ValidateTxtWriter::write(const std::string& value) {
   if (file == nullptr) return FALSE;
 
@@ -80,6 +70,7 @@ BOOL ValidateTxtWriter::write(const std::string& value) {
   return TRUE;
 }
 
+/// Writes a numeric value into the current context
 BOOL ValidateTxtWriter::write(I32 value) {
   if (file == nullptr) return FALSE;
 
@@ -88,6 +79,7 @@ BOOL ValidateTxtWriter::write(I32 value) {
   return TRUE;
 }
 
+/// Writes a key-value pair into the current context
 BOOL ValidateTxtWriter::write(const std::string& key, const std::string& value) {
   if (file == nullptr) return FALSE;
 
@@ -96,6 +88,7 @@ BOOL ValidateTxtWriter::write(const std::string& key, const std::string& value) 
   return TRUE;
 }
 
+/// Writes a numeric key-value pair into the current context
 BOOL ValidateTxtWriter::write(const std::string& key, I32 value) {
   if (file == nullptr) return FALSE;
 
@@ -104,6 +97,7 @@ BOOL ValidateTxtWriter::write(const std::string& key, I32 value) {
   return TRUE;
 }
 
+/// Writes a structured entry consisting of a variable identifier and optional descriptive note under the given key
 BOOL ValidateTxtWriter::write(const std::string& variable, const std::string& key, const std::string& note) {
   if (file == nullptr) return FALSE;
 
@@ -122,17 +116,12 @@ BOOL ValidateTxtWriter::write(const std::string& variable, const std::string& ke
   return TRUE;
 }
 
+/// Closes the current sub-section and restores the previous write context
 BOOL ValidateTxtWriter::endsub(const std::string& key) {
-  //if (file == nullptr || !inSub) return FALSE;
-
-  //indent--;
-  //inSub = false;
-  //fprintf(file, "\n");
-  //return TRUE;
-
   return end(key);
 }
 
+/// Closes the current section and restores the parent context; finalizes output if the root section is closed
 BOOL ValidateTxtWriter::end(const std::string& key) {
   if (file == nullptr || indent == 0) return FALSE;
 

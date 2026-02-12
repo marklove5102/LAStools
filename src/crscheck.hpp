@@ -35,7 +35,7 @@
 #define CRS_CHECK_HPP
 
 #include "lasutility.hpp"
-#include "lasvalidationresult.hpp"
+#include "lasvalidate_result.hpp"
 #include "geoprojectionconverter.hpp"
 
 class CRSprojectionEllipsoid

@@ -36,7 +36,7 @@
 
 #include "lasdefinitions.hpp"
 #include "lasutility.hpp"
-#include "lasvalidationresult.hpp"
+#include "lasvalidate_result.hpp"
 #include "geoprojectionconverter.hpp"
 #include <array>
 
