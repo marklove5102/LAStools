@@ -30,7 +30,7 @@ struct ValidationResult {
 
   void add_warning(const std::string& key, const std::string& note) {
     warning_messages.push_back({key, note});
-    status = ValidationStatus::warning;
+    if (status != ValidationStatus::failed) status = ValidationStatus::warning;
     warning_count++;
   }
 

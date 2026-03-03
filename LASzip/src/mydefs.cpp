@@ -862,6 +862,54 @@ I32 get_digits(F64 scale_factor) {
   return -1;
 }
 
+
+/// Correctly encapsulates CSV special characters and doubles quotation marks for valid CSV
+std::string escape_csv_value(const std::string& value) {
+  // only escape if special characters present
+  if (value.find_first_of(";\"\n\r") != std::string::npos) {
+    std::string escaped = "\"";
+    for (char c : value) {
+      if (c == '"')
+        escaped += "\"\"";  // double quotation marks
+      else
+        escaped += c;
+    }
+    escaped += "\"";
+    return escaped;
+  }
+  return value;  // no special characters
+}
+
+/// Converts all XML reserved characters in the string to their safe entity codes for valid XML
+std::string escape_xml_value(const std::string& value) {
+  std::string out;
+  out.reserve(value.size());
+
+  for (char c : value) {
+    switch (c) {
+      case '&':
+        out += "&amp;";
+        break;
+      case '<':
+        out += "&lt;";
+        break;
+      case '>':
+        out += "&gt;";
+        break;
+      case '"':
+        out += "&quot;";
+        break;
+      case '\'':
+        out += "&apos;";
+        break;
+      default:
+        out += c;
+        break;
+    }
+  }
+  return out;
+}
+
 /// endians 
 namespace Endian {
 /// Checks at runtime whether the system stores its multi-byte numbers in little-endian format in memory

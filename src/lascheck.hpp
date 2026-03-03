@@ -64,6 +64,9 @@ private:
   F64 max_x, max_y, max_z;
   I64 points_outside_bounding_box;
   I64 points_outside_gps_time_range;
+  bool scan_dir_valid;
+  bool edge_flight_line_valid;
+  bool classification_valid;
   LASinventory lasinventory;
   LASsummary lassummary;
   std::ostringstream problem_oss;

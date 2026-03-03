@@ -30,6 +30,7 @@
 */
 
 #include "format_writer.hpp"
+#include "validate_csv_writer.hpp"
 #include "validate_xml_writer.hpp"
 #include "validate_json_writer.hpp"
 #include "validate_txt_writer.hpp"
@@ -37,8 +38,10 @@
 
 ValidateWriter* FormatWriterFactory::createWriter(I32 format, FILE* file) {
   switch (format) {
+    case LAS_TOOLS_FORMAT_CSV:
+      return new ValidateCsvWriter(file);
     case LAS_TOOLS_FORMAT_XML:
-      return new ValidteXmlWriter(file);
+      return new ValidateXmlWriter(file);
     case LAS_TOOLS_FORMAT_TXT:
       return new ValidateTxtWriter(file);
     default :

@@ -36,14 +36,14 @@
 #include "validate_writer.hpp"
 #include <stdio.h>
 
-class ValidteXmlWriter : public ValidateWriter {
+class ValidateXmlWriter : public ValidateWriter {
  public:
   using ValidateWriter::ValidateWriter;
 
   BOOL is_open() const override;
   BOOL open(const std::string& key) override;
-  BOOL begin(const std::string& key) override;
-  BOOL beginsub(const std::string& key) override;
+  BOOL begin(const std::string& key, ContainerType type = ContainerType::Object) override;
+  BOOL beginsub(const std::string& key, ContainerType type = ContainerType::Object) override;
   BOOL write(I32 value) override;
   BOOL write(const std::string& value) override;
   BOOL write(const std::string& key, I32 value) override;
@@ -52,7 +52,9 @@ class ValidteXmlWriter : public ValidateWriter {
   BOOL endsub(const std::string& key) override;
   BOOL end(const std::string& key) override;
 
-  ~ValidteXmlWriter() override = default;
+  inline void next_file() override { return; };
+
+  ~ValidateXmlWriter() override = default;
 };
 
 #endif

@@ -31,8 +31,6 @@
 #include "validate_json_writer.hpp"
 #include <unordered_set>
 
-const std::unordered_set<std::string> arrayKeys = {"report", "fail", "warning"};
-
 BOOL ValidateJsonWriter::is_open() const {
   return (BOOL)(file != nullptr);
 }
@@ -49,12 +47,12 @@ BOOL ValidateJsonWriter::open(const std::string& key) {
 }
 
 /// Begins a new structured section identified by the given key and makes it the current write context
-BOOL ValidateJsonWriter::begin(const std::string& key) {
+BOOL ValidateJsonWriter::begin(const std::string& key, ContainerType type) {
   if (file == nullptr || stack.empty()) return FALSE;
 
   Json& current = *stack.back();
 
-  if (arrayKeys.find(key) != arrayKeys.end()) {
+  if (type == ContainerType::Array) {
     if (!current.contains(key)) current[key] = Json::array();
     current[key].push_back(Json::object());
     stack.push_back(&current[key].back());
@@ -67,21 +65,8 @@ BOOL ValidateJsonWriter::begin(const std::string& key) {
 }
 
 /// Begins a sub-section within the current section and makes it the active write context
-BOOL ValidateJsonWriter::beginsub(const std::string& key) {
-  if (file == nullptr || stack.empty()) return FALSE;
-
-  Json& current = *stack.back();
-
-  if (arrayKeys.find(key) != arrayKeys.end()) {
-    if (!current.contains(key)) current[key] = Json::array();
-    current[key].push_back(Json::object());
-    stack.push_back(&current[key].back());
-  } else {
-    current[key] = Json::object();
-    stack.push_back(&current[key]);
-  }
-
-  return TRUE;
+BOOL ValidateJsonWriter::beginsub(const std::string& key, ContainerType type) {
+  return begin(key, type);
 }
 
 /// Writes a simple value into the current context

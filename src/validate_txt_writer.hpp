@@ -42,8 +42,8 @@ class ValidateTxtWriter : public ValidateWriter {
 
   BOOL is_open() const override;
   BOOL open(const std::string& key) override;
-  BOOL begin(const std::string& key) override;
-  BOOL beginsub(const std::string& key) override;
+  BOOL begin(const std::string& key, ContainerType type = ContainerType::Object) override;
+  BOOL beginsub(const std::string& key, ContainerType type = ContainerType::Object) override;
   BOOL write(I32 value) override;
   BOOL write(const std::string& value) override;
   BOOL write(const std::string& key, I32 value) override;
@@ -51,6 +51,8 @@ class ValidateTxtWriter : public ValidateWriter {
   BOOL write(const std::string& variable, const std::string& key, const std::string& note) override;
   BOOL endsub(const std::string& key) override;
   BOOL end(const std::string& key) override;
+
+  inline void next_file() override { return; };
 
   ~ValidateTxtWriter() override = default;
 

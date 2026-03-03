@@ -207,6 +207,7 @@
     <ClCompile Include="format_writer.cpp" />
     <ClCompile Include="lascheck.cpp" />
     <ClCompile Include="lasvalidate.cpp" />
+    <ClCompile Include="validate_csv_writer.cpp" />
     <ClCompile Include="validate_json_writer.cpp" />
     <ClCompile Include="validate_txt_writer.cpp" />
     <ClCompile Include="validate_writer.cpp" />
@@ -217,6 +218,7 @@
     <ClInclude Include="format_writer.hpp" />
     <ClInclude Include="lascheck.hpp" />
     <ClInclude Include="lasvalidate_result.hpp" />
+    <ClInclude Include="validate_csv_writer.hpp" />
     <ClInclude Include="validate_json_writer.hpp" />
     <ClInclude Include="validate_txt_writer.hpp" />
     <ClInclude Include="validate_writer.hpp" />

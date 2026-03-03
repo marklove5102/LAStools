@@ -97,7 +97,7 @@ void LAScheck::check_parse(const LASpoint* laspoint, ValidationResult& results) 
     const U8 number_of_returns = laspoint->get_number_of_returns();
 
      if (number_of_returns == 0 || return_number == 0 || return_number > number_of_returns) {
-      set_oss_content(note_oss, "invalid return number (", return_number, ") / number of returns (", number_of_returns, ") combination");
+      set_oss_content(note_oss, "invalid return number (", static_cast<int>(return_number), ") / number of returns (", static_cast<int>(number_of_returns), ") combination");
       results.add_fail("return number", note_oss.str());
     }
   }
@@ -107,12 +107,40 @@ void LAScheck::check_parse(const LASpoint* laspoint, ValidationResult& results) 
     const U8 extended_number_of_returns = laspoint->get_extended_number_of_returns();
 
     if (extended_number_of_returns == 0 || extended_return_number == 0 || extended_return_number > extended_number_of_returns) {
-      set_oss_content(note_oss, "invalid extended return number (", extended_return_number, ") / extended number of returns (", 
-          extended_number_of_returns, ") combination");
-      results.add_fail("return number", note_oss.str());
+      set_oss_content(note_oss, "invalid extended return number (", static_cast<int>(extended_return_number), ") / extended number of returns (", 
+          static_cast<int>(extended_number_of_returns), ") combination");
+      results.add_fail("extended return number", note_oss.str());
     }
   }
+
+  // check that the scan direction and edge of flight line are correctly set to 0 or 1
+
+  U8 scan_dir = laspoint->get_scan_direction_flag();  // Bit 6 
+  U8 edge = laspoint->get_edge_of_flight_line();  // Bit 7 
+
+  // scan direction flag must be 0 or 1 
+  if (scan_dir != 0 && scan_dir != 1) {
+    scan_dir_valid = false;
+  }
+  // edge of flight line flag must be 0 or 1 
+  if (edge != 0 && edge != 1) {
+    edge_flight_line_valid = false;
+  }
+
+  // check that the classification value is valid according to LAS version
+
+  U8 classification = laspoint->get_classification();
+
+  // LAS 1.0–1.3: valid range is 0–31 
+  // LAS 1.4–1.5: valid range is 0–255
+  if (lasheader->version_minor <= 3) {
+    if (classification > 31) {
+      classification_valid = false;
+    }
+  }
+
   // point GPS time outside header range
+
   if (lasheader->version_major == 1 && lasheader->version_minor >= 5) {
     if (lasheader->point_data_format != 0 && lasheader->point_data_format != 2) {
       if (lasheader->min_gps_time > laspoint->gps_time || lasheader->max_gps_time < laspoint->gps_time) {
@@ -142,60 +170,60 @@ void LAScheck::check(ValidationResult& results, std::string& crsdescription, BOO
 
   if ((lasheader->version_major == 1) && (lasheader->version_minor <= 1)) {
     if (lasheader->global_encoding > 0) {
-      set_oss_content(note_oss, "should 0 for LAS version ", static_cast<int>(lasheader->version_major), ".", static_cast<int>(lasheader->version_minor),
+      set_oss_content(note_oss, "should 0 for LAS ", static_cast<int>(lasheader->version_major), ".", static_cast<int>(lasheader->version_minor),
           " but is ", lasheader->global_encoding);
       results.add_fail("global encoding", note_oss.str());
     }
   }
   else if ((lasheader->version_major == 1) && (lasheader->version_minor <= 2)) {
     if (lasheader->global_encoding > 1) {
-      set_oss_content(note_oss, "should not be greater than 1 for LAS version ", static_cast<int>(lasheader->version_major), ".",
+      set_oss_content(note_oss, "should be <= 1 for LAS ", static_cast<int>(lasheader->version_major), ".",
           static_cast<int>(lasheader->version_minor), " but is ", lasheader->global_encoding);
       results.add_fail("global encoding", note_oss.str());
     }
   }
   else if ((lasheader->version_major == 1) && (lasheader->version_minor <= 3)) {
     if (lasheader->global_encoding > 15) {
-      set_oss_content(note_oss, "should not be greater than 15 for LAS version ", static_cast<int>(lasheader->version_major), ".", 
+      set_oss_content(note_oss, "should be <= 15 for LAS ", static_cast<int>(lasheader->version_major), ".", 
           static_cast<int>(lasheader->version_minor), " but is ", lasheader->global_encoding);
       results.add_fail("global encoding", note_oss.str());
     }
   } else if ((lasheader->version_major == 1) && (lasheader->version_minor <= 4)) {
     if (lasheader->global_encoding > 29) {
-      set_oss_content(note_oss, "should not be greater than 31 for LAS version ", static_cast<int>(lasheader->version_major), ".", 
+      set_oss_content(note_oss, "should be <= 31 for LAS ", static_cast<int>(lasheader->version_major), ".", 
           static_cast<int>(lasheader->version_minor), " but is ", lasheader->global_encoding);
       results.add_fail("global encoding", note_oss.str());
     }
   } else if ((lasheader->version_major == 1) && (lasheader->version_minor <= 5)) {
     if (lasheader->global_encoding > 93) {
-      set_oss_content(note_oss, "invalid global_encoding in LAS 1.", static_cast<int>(lasheader->version_major), " header: ", lasheader->global_encoding,
-          ". Only bits 0-4 and bit 6 are allowed");
+      set_oss_content(note_oss, "invalid in LAS 1.", static_cast<int>(lasheader->version_major), " header: ", lasheader->global_encoding,
+          ". Only bits 0-4 and bit 6");
       results.add_fail("global encoding", note_oss.str());
     }
   }
 
   if (lasheader->global_encoding & 64) {
     if ((lasheader->version_major == 1) && (lasheader->version_minor <= 4)) {
-      set_oss_content(note_oss, "set bit 6 not defined for LAS version 1.", static_cast<int>(lasheader->version_minor));
+      set_oss_content(note_oss, "bit 6 not defined for LAS 1.", static_cast<int>(lasheader->version_minor));
       results.add_fail("global encoding", note_oss.str());
     }
   }
 
   if (lasheader->global_encoding & 32) {
     if ((lasheader->version_major == 1) && (lasheader->version_minor <= 5)) {
-      set_oss_content(note_oss, "set bit 5 not defined for LAS version 1.", static_cast<int>(lasheader->version_minor));
+      set_oss_content(note_oss, "bit 5 not defined for LAS 1.", static_cast<int>(lasheader->version_minor));
       results.add_fail("global encoding", note_oss.str());
     }
   }
 
   if (lasheader->global_encoding & 16) {
     if ((lasheader->version_major == 1) && (lasheader->version_minor <= 3)) {
-      set_oss_content(note_oss, "set bit 4 not defined for LAS version ", static_cast<int>(lasheader->version_major), ".", static_cast<int>(lasheader->version_minor));
+      set_oss_content(note_oss, "bit 4 not defined for LAS ", static_cast<int>(lasheader->version_major), ".", static_cast<int>(lasheader->version_minor));
       results.add_fail("global encoding", note_oss.str());
     }
   } else {
     if ((lasheader->version_major == 1) && (lasheader->version_minor == 4) && (lasheader->point_data_format >= 6)) {
-      set_oss_content(note_oss, "bit 4 must be set (OGC WKT must be used) for point data format ", static_cast<int>(lasheader->point_data_format), " and LAS 1.",
+      set_oss_content(note_oss, "bit 4 must be set (OGC WKT) for point data format ", static_cast<int>(lasheader->point_data_format), " and LAS 1.",
           static_cast<int>(lasheader->version_minor));
       results.add_fail("global encoding", note_oss.str());
     }
@@ -203,28 +231,28 @@ void LAScheck::check(ValidationResult& results, std::string& crsdescription, BOO
 
   if (lasheader->global_encoding & 8) {
     if ((lasheader->version_major == 1) && (lasheader->version_minor <= 2)) {
-      set_oss_content(note_oss, "set bit 3 not defined for LAS version ", static_cast<int>(lasheader->version_major), ".", static_cast<int>(lasheader->version_minor));
+      set_oss_content(note_oss, "bit 3 not defined for LAS ", static_cast<int>(lasheader->version_major), ".", static_cast<int>(lasheader->version_minor));
       results.add_fail("global encoding", note_oss.str());
     }
   }
 
   if (lasheader->global_encoding & 4) {
     if ((lasheader->version_major == 1) && (lasheader->version_minor <= 2)) {
-      set_oss_content(note_oss, "set bit 2 not defined for LAS version ", static_cast<int>(lasheader->version_major), ".", static_cast<int>(lasheader->version_minor));
+      set_oss_content(note_oss, "bit 2 not defined for LAS ", static_cast<int>(lasheader->version_major), ".", static_cast<int>(lasheader->version_minor));
       results.add_fail("global encoding", note_oss.str());
     }
     if ((lasheader->point_data_format != 4) && (lasheader->point_data_format != 5) && (lasheader->point_data_format != 9) && (lasheader->point_data_format != 10)) {
-      set_oss_content(note_oss, "set bit 2 not defined for point data format ", static_cast<int>(lasheader->point_data_format));
+      set_oss_content(note_oss, "bit 2 not defined for point data format ", static_cast<int>(lasheader->point_data_format));
       results.add_fail("global encoding", note_oss.str());
     }
     if (lasheader->global_encoding & 2) {
-      set_oss_content(note_oss, "although bit 1 and bit 2 are mutually exclusive they are both set");
+      set_oss_content(note_oss, "bit 1 and bit 2 are mutually exclusive but both are set");
       results.add_fail("global encoding", note_oss.str());
     }
   } else if ((lasheader->version_major == 1) && (lasheader->version_minor >= 3)) {
     if ((lasheader->point_data_format == 4) || (lasheader->point_data_format == 5) || (lasheader->point_data_format == 9) || (lasheader->point_data_format == 10)) {
       if ((lasheader->global_encoding & 2) == 0) {
-        set_oss_content(note_oss, "neither bit 1 nor bit 2 are set for point data format ", static_cast<int>(lasheader->point_data_format));
+        set_oss_content(note_oss, "bit 1 nor 2 set for point data format ", static_cast<int>(lasheader->point_data_format));
         results.add_warning("global encoding", note_oss.str());
       }
     }
@@ -232,17 +260,17 @@ void LAScheck::check(ValidationResult& results, std::string& crsdescription, BOO
 
   if (lasheader->global_encoding & 2) {
     if ((lasheader->version_major == 1) && (lasheader->version_minor <= 2)) {
-      set_oss_content(note_oss, "set bit 1 not defined for LAS version ", static_cast<int>(lasheader->version_major), ".", static_cast<int>(lasheader->version_minor));
+      set_oss_content(note_oss, "bit 1 not defined for LAS ", static_cast<int>(lasheader->version_major), ".", static_cast<int>(lasheader->version_minor));
       results.add_fail("global encoding", note_oss.str());
     }
     if ((lasheader->point_data_format != 4) && (lasheader->point_data_format != 5) && (lasheader->point_data_format != 9) && (lasheader->point_data_format != 10)) {
-      set_oss_content(note_oss, "set bit 1 not defined for point data format ", static_cast<int>(lasheader->point_data_format));
+      set_oss_content(note_oss, "bit 1 not defined for point data format ", static_cast<int>(lasheader->point_data_format));
       results.add_fail("global encoding", note_oss.str());
     }
     if ((lasheader->version_major == 1) && (lasheader->version_minor >= 4)) {
       if ((lasheader->point_data_format == 4) || (lasheader->point_data_format == 5) || (lasheader->point_data_format == 9) ||
           (lasheader->point_data_format == 10)) {
-        set_oss_content(note_oss, "bit 1 ist set, but LAS version 1.", static_cast<int>(lasheader->version_major), " requires all waveform data to be stored externally in a .wdp file");
+        set_oss_content(note_oss, "bit 1 is set, but LAS 1.", static_cast<int>(lasheader->version_major), " requires waveform data external .wdp");
         results.add_fail("global encoding", note_oss.str());
       }
     }
@@ -250,12 +278,12 @@ void LAScheck::check(ValidationResult& results, std::string& crsdescription, BOO
 
   if (lasheader->global_encoding & 1) {
     if ((lasheader->version_major == 1) && (lasheader->version_minor <= 1)) {
-      set_oss_content(note_oss, "set bit 0 not defined for LAS version ", static_cast<int>(lasheader->version_major), ".", static_cast<int>(lasheader->version_minor));
+      set_oss_content(note_oss, "bit 0 not defined for LAS ", static_cast<int>(lasheader->version_major), ".", static_cast<int>(lasheader->version_minor));
       results.add_fail("global encoding", note_oss.str());
     }
 
     if (lasheader->point_data_format == 0 || lasheader->point_data_format == 2) {
-      set_oss_content(note_oss, "set bit 0 not defined for point data format ", static_cast<int>(lasheader->point_data_format));
+      set_oss_content(note_oss, "bit 0 not defined for point data format ", static_cast<int>(lasheader->point_data_format));
       results.add_fail("global encoding", note_oss.str());
     }
   } else {
@@ -265,7 +293,7 @@ void LAScheck::check(ValidationResult& results, std::string& crsdescription, BOO
           std::string string1, string2;
           lidardouble2string(string1, lasinventory.min_gps_time, 0.000001);
           lidardouble2string(string2, lasinventory.max_gps_time, 0.000001);
-          set_oss_content(note_oss, "unset bit 0 suggests GPS week time but GPS time ranges from ", string1, " to ", string2);
+          set_oss_content(note_oss, "unset bit 0 implies GPS week time, but GPS time ranges ", string1, " to ", string2);
           results.add_fail("global encoding", note_oss.str());
         }
       }
@@ -277,7 +305,7 @@ void LAScheck::check(ValidationResult& results, std::string& crsdescription, BOO
   LASMessage(LAS_VERY_VERBOSE, "check major and minor version");
 
   if (lasheader->version_major != 1) {
-    set_oss_content(note_oss, "should be 1 and not ", lasheader->version_major);
+    set_oss_content(note_oss, "should be 1 not ", static_cast<int>(lasheader->version_major));
     results.add_fail("version major", note_oss.str());
   }
 
@@ -285,7 +313,7 @@ void LAScheck::check(ValidationResult& results, std::string& crsdescription, BOO
 
   if ((lasheader->version_minor != 0) && (lasheader->version_minor != 1) && (lasheader->version_minor != 2) && (lasheader->version_minor != 3) &&
       (lasheader->version_minor != 4) && (lasheader->version_minor != 5)) {
-    set_oss_content(note_oss, "should be between 0 and 5 and not ", lasheader->version_minor);
+    set_oss_content(note_oss, "should be 0-5 not ", static_cast<int>(lasheader->version_minor));
     results.add_fail("version minor", note_oss.str());
   }
 
@@ -299,10 +327,10 @@ void LAScheck::check(ValidationResult& results, std::string& crsdescription, BOO
     }
   }
   if (i == 32) {
-    set_oss_content(note_oss, "string should be terminated by a '\\0' character");
+    set_oss_content(note_oss, "should be terminated by '\\0'");
     results.add_fail("system identifier", note_oss.str());
   } else if (i == 0) {
-    set_oss_content(note_oss, "empty string. first character is '\\0'");
+    set_oss_content(note_oss, "empty string. begins with '\\0'");
     results.add_warning("system identifier", note_oss.str());
   }
   for (j = i; j < 32; j++) {
@@ -311,7 +339,7 @@ void LAScheck::check(ValidationResult& results, std::string& crsdescription, BOO
     }
   }
   if (j != 32) {
-    set_oss_content(note_oss, "remaining characters should all be '\\0'");
+    set_oss_content(note_oss, "remaining characters should be '\\0'");
     results.add_fail("system identifier", note_oss.str());
   }
 
@@ -325,10 +353,10 @@ void LAScheck::check(ValidationResult& results, std::string& crsdescription, BOO
     }
   }
   if (i == 32) {
-    set_oss_content(note_oss, "string should be terminated by a '\\0' character");
+    set_oss_content(note_oss, "should be terminated by '\\0'");
     results.add_fail("generating software", note_oss.str());
   } else if (i == 0) {
-    set_oss_content(note_oss, "empty string. first character is '\\0'");
+    set_oss_content(note_oss, "empty string. begins with '\\0'");
     results.add_warning("generating software", note_oss.str());
   }
   for (j = i; j < 32; j++) {
@@ -337,7 +365,7 @@ void LAScheck::check(ValidationResult& results, std::string& crsdescription, BOO
     }
   }
   if (j != 32) {
-    set_oss_content(note_oss, "remaining characters should all be '\\0'");
+    set_oss_content(note_oss, "remaining characters should be '\\0'");
     results.add_fail("generating software", note_oss.str());
   }
 
@@ -351,7 +379,7 @@ void LAScheck::check(ValidationResult& results, std::string& crsdescription, BOO
       results.add_fail("file creation day", note_oss.str());
     }
     else if (lasheader->file_creation_day > 365) {
-      set_oss_content(note_oss, "should be between 1 and 365 and not ", lasheader->file_creation_day);
+      set_oss_content(note_oss, "should be between 1-365 not ", lasheader->file_creation_day);
       results.add_fail("file creation day", note_oss.str());
     }
     set_oss_content(note_oss, "not set");
@@ -372,7 +400,7 @@ void LAScheck::check(ValidationResult& results, std::string& crsdescription, BOO
     // does the year fall into the expected range
 
     if ((lasheader->file_creation_year < 1990) || (lasheader->file_creation_year > today_year)) {
-      set_oss_content(note_oss, "should be between 1990 and ", today_year, " and not ", lasheader->file_creation_year);
+      set_oss_content(note_oss, "should be between 1990-", today_year, " not ", lasheader->file_creation_year);
       results.add_fail("file creation year", note_oss.str());
     }
 
@@ -390,7 +418,7 @@ void LAScheck::check(ValidationResult& results, std::string& crsdescription, BOO
     }
 
     if (lasheader->file_creation_day > max_day_of_year) {
-      set_oss_content(note_oss, "should be between 1 and ", max_day_of_year, " and not ", lasheader->file_creation_day);
+      set_oss_content(note_oss, "should be between 1-", max_day_of_year, " not ", lasheader->file_creation_day);
       results.add_fail("file creation day", note_oss.str());
     }
   }
@@ -412,7 +440,7 @@ void LAScheck::check(ValidationResult& results, std::string& crsdescription, BOO
   }
 
   if (lasheader->header_size < min_header_size) {
-    set_oss_content(note_oss, "should be at least ", min_header_size, " and not ", lasheader->header_size);
+    set_oss_content(note_oss, "at least ", min_header_size, " not ", lasheader->header_size);
     results.add_fail("header size", note_oss.str());
   }
 
@@ -428,7 +456,7 @@ void LAScheck::check(ValidationResult& results, std::string& crsdescription, BOO
   }
 
   if (lasheader->offset_to_point_data < min_offset_to_point_data) {
-    set_oss_content(note_oss, "should be at least ", min_offset_to_point_data, " and not ", lasheader->offset_to_point_data);
+    set_oss_content(note_oss, "at least ", min_offset_to_point_data, " not ", lasheader->offset_to_point_data);
     results.add_fail("offset to point data", note_oss.str());
   }
 
@@ -450,13 +478,13 @@ void LAScheck::check(ValidationResult& results, std::string& crsdescription, BOO
   }
 
   if (lasheader->point_data_format > max_point_data_format) {
-    set_oss_content(note_oss, "should be between 0 and ", max_point_data_format, " and not ", static_cast<int>(lasheader->point_data_format));
+    set_oss_content(note_oss, "should be between 0-", static_cast<int>(max_point_data_format), " not ", static_cast<int>(lasheader->point_data_format));
     results.add_fail("point data format", note_oss.str());
   }
 
   if ((lasheader->version_major == 1) && (lasheader->version_minor >= 5)) {
     if (lasheader->point_data_format < min_point_data_format) {
-      set_oss_content(note_oss, "should be between 6 and ", max_point_data_format, " and not ", static_cast<int>(lasheader->point_data_format), 
+      set_oss_content(note_oss, "should be between 6-", static_cast<int>(max_point_data_format), " not ", static_cast<int>(lasheader->point_data_format), 
           " for LAS 1.", static_cast<int>(lasheader->version_minor));
       results.add_fail("point data format", note_oss.str());
     }
@@ -502,20 +530,57 @@ void LAScheck::check(ValidationResult& results, std::string& crsdescription, BOO
   }
 
   if (lasheader->point_data_record_length < min_point_data_record_length) {
-    set_oss_content(note_oss, "should be at least ", min_point_data_record_length, " and not ", lasheader->point_data_record_length);
+    set_oss_content(note_oss, "should be at least ", min_point_data_record_length, " not ", lasheader->point_data_record_length);
     results.add_fail("point data record length", note_oss.str());
+  }
+
+  // check extra bytes in point data record length
+  // Simplified approach only: extra bytes are only present in LAS 1.4 or higher, and if present, an extra bytes VLR or EVLR (User ID "LASF_Spec", Record ID 4) must exist.
+
+  LASMessage(LAS_VERY_VERBOSE, "check extra bytes in point data record length");
+
+  if ((lasheader->version_major == 1) && (lasheader->version_minor < 4)) {
+    if (lasheader->point_data_record_length != min_point_data_record_length) {
+      set_oss_content(note_oss, "LAS ", lasheader->version_major, ".", lasheader->version_minor, " allows no extra bytes; expected ", 
+          min_point_data_record_length, " but found ", lasheader->point_data_record_length);
+      results.add_fail("extra bytes", note_oss.str());
+    }
+  } else {
+    if (lasheader->point_data_record_length > min_point_data_record_length) {
+      // check that at least one extra byte VLR/EVLR exist.
+      bool has_extra_bytes_struct = false;
+
+      for (U32 i = 0; i < lasheader->number_of_variable_length_records; i++) {
+        LASvlr* vlr = &(lasheader->vlrs[i]);
+        if (strcmp(vlr->user_id, "LASF_Spec") == 0 && vlr->record_id == 4) {
+          has_extra_bytes_struct = true;
+          break;
+        }
+      }
+      for (U32 i = 0; i < lasheader->number_of_extended_variable_length_records; i++) {
+        LASevlr* evlr = &(lasheader->evlrs[i]);
+        if (strcmp(evlr->user_id, "LASF_Spec") == 0 && evlr->record_id == 4) {
+          has_extra_bytes_struct = true;
+          break;
+        }
+      }
+      if (!has_extra_bytes_struct) {
+        int extra_bytes_in_record = lasheader->point_data_record_length - min_point_data_record_length;
+
+        set_oss_content(note_oss, "point data record length shows extra bytes (", extra_bytes_in_record, " bytes), but no extra bytes VLR/EVLR exists");
+        results.add_fail("extra bytes", note_oss.str());
+      }
+    }
   }
 
   // check that there is at least one point
 
   if ((lasheader->version_major == 1) && (lasheader->version_minor < 4)) {
     if (lasheader->number_of_point_records == 0) {
-      set_oss_content(note_oss, "files must contain at least one point record to be considered valid");
+      set_oss_content(note_oss, "files need at least one point record");
       results.add_fail("zero points in file", note_oss.str());
     }
-  }
-  else
-  {
+  } else {
     if (lasheader->extended_number_of_point_records == 0) {
       set_oss_content(note_oss, "file contains zero point records");
       results.add_warning("zero points in file", note_oss.str());
@@ -526,20 +591,20 @@ void LAScheck::check(ValidationResult& results, std::string& crsdescription, BOO
 
   LASMessage(LAS_VERY_VERBOSE, "check number of points by return");
   
-  I64 total = 0;
+  U64 total = 0;
 
   if ((lasheader->version_major == 1) && (lasheader->version_minor < 4)) {
     for (i = 0; i < 5; i++) {
       if (lasheader->number_of_points_by_return[i] > lasheader->number_of_point_records) {
         set_oss_content(problem_oss, "legacy number of points by return[", i, "]");
-        set_oss_content(note_oss, "should not be larger than number of point records in the file header");
+        set_oss_content(note_oss, "should not exceed number of point records in header");
         results.add_fail(problem_oss.str(), note_oss.str());
       }
       total += lasheader->number_of_points_by_return[i];
     }
     if (total > lasheader->number_of_point_records) {
-      set_oss_content(note_oss, "sum should not be larger than number of point records in the file header");
-      results.add_fail("legacy number of points by return [] array", note_oss.str());
+      set_oss_content(note_oss, "sum (", total, ") should not exceed number of point records in header");
+      results.add_fail("legacy number of points by return []", note_oss.str());
     }
   }
   else
@@ -547,14 +612,14 @@ void LAScheck::check(ValidationResult& results, std::string& crsdescription, BOO
     for (i = 0; i < 15; i++) {
       if (lasheader->extended_number_of_points_by_return[i] > lasheader->extended_number_of_point_records) {
         set_oss_content(problem_oss, "number of points by return[", i, "]");
-        set_oss_content(note_oss, "should not be larger than extended number of point records in the file header");
+        set_oss_content(note_oss, "should not exceed extended number of point records in header");
         results.add_fail(problem_oss.str(), note_oss.str());
       }
       total += lasheader->extended_number_of_points_by_return[i];
     }
     if (total > lasheader->extended_number_of_point_records) {
-      set_oss_content(note_oss, "sum should not be larger than extended number of point records in the file header");
-      results.add_fail("number of points by return [] array", note_oss.str());
+      set_oss_content(note_oss, "sum (", total, ") should not exceed extended number of point records in header");
+      results.add_fail("number of points by return []", note_oss.str());
     }
   }
 
@@ -563,22 +628,21 @@ void LAScheck::check(ValidationResult& results, std::string& crsdescription, BOO
   LASMessage(LAS_VERY_VERBOSE, "check integraty between legacy number of point records and extended number of point records");
 
   if ((lasheader->version_major == 1) && (lasheader->version_minor >= 4)) {
-    if (lasheader->number_of_point_records == 0) {
-      if ((lasheader->extended_number_of_point_records > 0) && (lasheader->extended_number_of_point_records <= U32_MAX)) {
-        set_oss_content(note_oss, "unnecessary lack of forward compatibility. should be ", lasheader->extended_number_of_point_records, " as this LAS 1.",
-            static_cast<int>(lasheader->version_minor), " because file contains less than ", U32_MAX, " points of type ", static_cast<int>(lasheader->point_data_format));
-        results.add_warning("legacy number of point records", note_oss.str());
-      }
-    } else {
-      if (lasheader->extended_number_of_point_records != lasheader->number_of_point_records) {
-        if (lasheader->extended_number_of_point_records <= U32_MAX) {
-          set_oss_content(note_oss, "should be ", lasheader->extended_number_of_point_records, " to be consistent with number of point records instead of ",
-              lasheader->number_of_point_records);
-        } else {
-          set_oss_content(note_oss, "should be 0 for LAS 1.", static_cast<int>(lasheader->version_minor), " files that contain over ", U32_MAX, " points");
+    if (lasheader->point_data_format < 6) {
+      if (lasheader->extended_number_of_point_records <= U32_MAX) {
+        if (lasheader->extended_number_of_point_records != lasheader->number_of_point_records) {
+          set_oss_content(note_oss, "forward-compatibility issue: expected ", lasheader->extended_number_of_point_records, 
+              " but found ", lasheader->number_of_point_records);
+          results.add_fail("legacy number of point records", note_oss.str());
         }
+      } else if (lasheader->number_of_point_records != 0) {
+        set_oss_content(note_oss, "expected 0 for LAS 1.", static_cast<int>(lasheader->version_minor), " (>", U32_MAX, " points)");
         results.add_fail("legacy number of point records", note_oss.str());
       }
+    } else if (lasheader->number_of_point_records != 0) {
+      set_oss_content( note_oss, "expected 0 for LAS 1.", static_cast<int>(lasheader->version_minor), " and point data format ",
+          static_cast<int>(lasheader->point_data_format));
+          results.add_fail("legacy number of point records", note_oss.str());
     }
   }
 
@@ -587,7 +651,7 @@ void LAScheck::check(ValidationResult& results, std::string& crsdescription, BOO
   LASMessage(LAS_VERY_VERBOSE, "check integraty between legacy number of points by return and number of points by return");
 
   if ((lasheader->version_major == 1) && (lasheader->version_minor >= 4)) {
-    if (lasheader->extended_number_of_point_records <= U32_MAX) {
+    if (lasheader->extended_number_of_point_records <= U32_MAX && lasheader->point_data_format < 6) {
       // Legacy returns may be used
       for (i = 0; i < 5; i++) {
         U64 ext = lasheader->extended_number_of_points_by_return[i];
@@ -598,12 +662,12 @@ void LAScheck::check(ValidationResult& results, std::string& crsdescription, BOO
         if (ext <= UINT32_MAX) {
           // Must match exactly
           if (leg != static_cast<uint32_t>(ext)) {
-            set_oss_content(note_oss, "legacy ", leg, " and extended ", ext, " points-by-return mismatch as this LAS 1.", static_cast<int>(lasheader->version_minor),
-                " file contains less than", U32_MAX, " points");
+            set_oss_content(note_oss, "points-by-return mismatch (legacy ", leg, " vs. extended ", ext, ") for LAS 1.", static_cast<int>(lasheader->version_minor),
+                " (>", U32_MAX, " points)");
             results.add_fail(problem_oss.str(), note_oss.str());
           }
         } else if (leg != 0) {
-          set_oss_content(note_oss, "legacy value ", leg, " is invalid because extended value ", ext, " exceeds 32-bit range in LAS 1.", 
+          set_oss_content(note_oss, "legacy value ", leg, " invalid because extended value ", ext, " exceeds 32-bit range in LAS 1.", 
               static_cast<int>(lasheader->version_minor));
           results.add_warning(problem_oss.str(), note_oss.str());
         }
@@ -613,7 +677,7 @@ void LAScheck::check(ValidationResult& results, std::string& crsdescription, BOO
       for (i = 0; i < 5; i++) {
         if (lasheader->number_of_points_by_return[i] != 0) {
           set_oss_content(problem_oss, "legacy number of points by return[", i, "]");
-          set_oss_content(note_oss, "should be 0 for LAS 1.", static_cast<int>(lasheader->version_minor), " files that contain more than ", U32_MAX, " points");
+          set_oss_content(note_oss, "expected 0 for LAS 1.", static_cast<int>(lasheader->version_minor), "(> ", U32_MAX, " points)");
           results.add_fail(problem_oss.str(), note_oss.str());
         }
       }
@@ -646,13 +710,13 @@ void LAScheck::check(ValidationResult& results, std::string& crsdescription, BOO
 
   if (lassummary.active()) {
     if ((lasheader->version_major == 1) && (lasheader->version_minor >= 4)) {
-      if (lasheader->extended_number_of_point_records != lassummary.number_of_point_records) {
-        set_oss_content(note_oss, "there are only ", lassummary.number_of_point_records, " point records and not ", lasheader->extended_number_of_point_records);
+      if (lasheader->extended_number_of_point_records != static_cast<U64>(lassummary.number_of_point_records)) {
+        set_oss_content(note_oss, "only ", lassummary.number_of_point_records, " point records not ", lasheader->extended_number_of_point_records);
         results.add_fail("number of point records", note_oss.str());
       }
     } else {
       if (lasheader->number_of_point_records != U32_CLAMP(lassummary.number_of_point_records)) {
-        set_oss_content(note_oss, "there are only ", U32_CLAMP(lassummary.number_of_point_records), " point records and not ", lasheader->number_of_point_records);
+        set_oss_content(note_oss, "only ", U32_CLAMP(lassummary.number_of_point_records), " point records not ", lasheader->number_of_point_records);
         results.add_fail("number of point records", note_oss.str());
       }
     }
@@ -665,10 +729,10 @@ void LAScheck::check(ValidationResult& results, std::string& crsdescription, BOO
   if (lassummary.active()) {
     if ((lasheader->version_major == 1) && (lasheader->version_minor >= 4)) {
       for (i = 0; i < 15; i++) {
-        if (lasheader->extended_number_of_points_by_return[i] != lassummary.number_of_points_by_return[i + 1]) {
+        if (lasheader->extended_number_of_points_by_return[i] != static_cast<U64>(lassummary.number_of_points_by_return[i + 1])) {
           set_oss_content(problem_oss, "number of points by return[", i, "]");
-          set_oss_content(note_oss, "the number of ", i + 1, (i == 0 ? "st" : (i == 1 ? "nd" : (i == 2 ? "rd" : "th"))), " returns is ",
-              lassummary.number_of_points_by_return[i + 1], " and not ", lasheader->extended_number_of_points_by_return[i]);
+          set_oss_content(note_oss, "number of ", i + 1, (i == 0 ? "st" : (i == 1 ? "nd" : (i == 2 ? "rd" : "th"))), " returns is ",
+              lassummary.number_of_points_by_return[i + 1], " not ", lasheader->extended_number_of_points_by_return[i]);
           results.add_fail(problem_oss.str(), note_oss.str());
         }
       }
@@ -678,8 +742,8 @@ void LAScheck::check(ValidationResult& results, std::string& crsdescription, BOO
       for (i = 0; i < 5; i++) {
         if (lasheader->number_of_points_by_return[i] != U32_CLAMP(lassummary.number_of_points_by_return[i + 1])) {
           set_oss_content(problem_oss, "number of points by return[", i, "]");
-          set_oss_content(note_oss, "the number of ", i + 1, (i == 0 ? "st" : (i == 1 ? "nd" : (i == 2 ? "rd" : "th"))), " returns is ",
-              U32_CLAMP(lassummary.number_of_points_by_return[i + 1]), " and not ", lasheader->number_of_points_by_return[i]);
+          set_oss_content(note_oss, "number of ", i + 1, (i == 0 ? "st" : (i == 1 ? "nd" : (i == 2 ? "rd" : "th"))), " returns is ",
+              U32_CLAMP(lassummary.number_of_points_by_return[i + 1]), " not ", lasheader->number_of_points_by_return[i]);
           results.add_fail(problem_oss.str(), note_oss.str());
         }
       }
@@ -691,17 +755,17 @@ void LAScheck::check(ValidationResult& results, std::string& crsdescription, BOO
   LASMessage(LAS_VERY_VERBOSE, "check scale factor x y z");
 
   if (lasheader->x_scale_factor <= 0.0) {
-    set_oss_content(note_oss, lasheader->x_scale_factor , " is equal to or smaller than zero");
+    set_oss_content(note_oss, lasheader->x_scale_factor , " equal to or smaller than zero");
     results.add_fail("x scale factor", note_oss.str());
   }
 
   if (lasheader->y_scale_factor <= 0.0) {
-    set_oss_content(note_oss, lasheader->y_scale_factor , " is equal to or smaller than zero");
+    set_oss_content(note_oss, lasheader->y_scale_factor , " equal to or smaller than zero");
     results.add_fail("y scale factor", note_oss.str());
   }
 
   if (lasheader->z_scale_factor <= 0.0) {
-    set_oss_content(note_oss, lasheader->z_scale_factor , " is equal to or smaller than zero");
+    set_oss_content(note_oss, lasheader->z_scale_factor , " equal to or smaller than zero");
     results.add_fail("z scale factor", note_oss.str());
   }
 
@@ -724,23 +788,23 @@ void LAScheck::check(ValidationResult& results, std::string& crsdescription, BOO
   }
 
   if (!valid_x_scale) {
-    std::string val_str;
-    lidardouble2string(val_str, lasheader->x_scale_factor);
-    set_oss_content(note_oss, "should be factor ten of 0.1 or 0.5 or 0.25 and not ", val_str);
+    std::string string;
+    lidardouble2string(string, lasheader->x_scale_factor);
+    set_oss_content(note_oss, "expected factor ten of 0.1 or 0.5 or 0.25 not ", string);
     results.add_warning("x scale factor", note_oss.str());
   }
 
   if (!valid_y_scale) {
     std::string string;
     lidardouble2string(string, lasheader->y_scale_factor);
-    set_oss_content(note_oss, "should be factor ten of 0.1 or 0.5 or 0.25 and not ", string);
+    set_oss_content(note_oss, "expected factor ten of 0.1 or 0.5 or 0.25 not ", string);
     results.add_warning("y scale factor", note_oss.str());
   }
 
   if (!valid_z_scale) {
     std::string string;
     lidardouble2string(string, lasheader->z_scale_factor);
-    set_oss_content(note_oss, "should be factor ten of 0.1 or 0.5 or 0.25 and not ", string);
+    set_oss_content(note_oss, "expected factor ten of 0.1 or 0.5 or 0.25 not ", string);
     results.add_warning("z scale factor", note_oss.str());
   }
 
@@ -764,7 +828,7 @@ void LAScheck::check(ValidationResult& results, std::string& crsdescription, BOO
     std::string string1, string2;
     lidardouble2string(string1, lasheader->y_offset);
     lidardouble2string(string2, lasheader->y_scale_factor);
-    set_oss_content(note_oss, "translation fluff: decimal digits of ", string1, " do not match scale factor ", string2);
+    set_oss_content(note_oss, "decimal digits of ", string1, " do not match scale factor ", string2);
     results.add_warning("y offset", note_oss.str());
   }
 
@@ -774,7 +838,7 @@ void LAScheck::check(ValidationResult& results, std::string& crsdescription, BOO
     std::string string1, string2;
     lidardouble2string(string1, lasheader->z_offset);
     lidardouble2string(string2, lasheader->z_scale_factor);
-    set_oss_content(note_oss, "translation fluff: decimal digits of ", string1, " do not match scale factor ", string2);
+    set_oss_content(note_oss, "decimal digits of ", string1, " do not match scale factor ", string2);
     results.add_warning("z offset", note_oss.str());
   }
 
@@ -784,10 +848,10 @@ void LAScheck::check(ValidationResult& results, std::string& crsdescription, BOO
 
   if ((lasheader->version_major == 1) && (lasheader->version_minor >= 3)) {
     if (((lasheader->global_encoding & 2) == 0) && (lasheader->start_of_waveform_data_packet_record != 0)) {
-      set_oss_content(note_oss, "should be 0 and not ", lasheader->start_of_waveform_data_packet_record, " because global encoding bit 1 is not set");
+      set_oss_content(note_oss, "expected 0 not ", lasheader->start_of_waveform_data_packet_record, " because global encoding bit 1 is not set");
       results.add_fail("start of waveform data packet record", note_oss.str());
     } else if (((lasheader->global_encoding & 2) == 2) && (lasheader->start_of_waveform_data_packet_record == 0)) {
-      set_oss_content(note_oss, "should not be 0 because global encoding bit 1 is set");
+      set_oss_content(note_oss, "expected non-zero value; global encoding bit 1 is set");
       results.add_fail("start of waveform data packet record", note_oss.str());
     }
   }
@@ -819,7 +883,7 @@ void LAScheck::check(ValidationResult& results, std::string& crsdescription, BOO
   LASMessage(LAS_VERY_VERBOSE, "check bounding box x y z");
 
   if (points_outside_bounding_box > 0) {
-    set_oss_content(note_oss, "there are ", points_outside_bounding_box, " points outside of the bounding box specified in the LAS file header");
+    set_oss_content(note_oss, points_outside_bounding_box, " points outside the header bounding box");
     results.add_fail("bounding box", note_oss.str());
   }
 
@@ -832,44 +896,67 @@ void LAScheck::check(ValidationResult& results, std::string& crsdescription, BOO
       std::string string1, string2;
       lidardouble2string(string1, lasheader->get_x(lasinventory.min_X), lasheader->x_scale_factor);
       lidardouble2string(string2, lasheader->min_x, lasheader->x_scale_factor);
-      set_oss_content(note_oss, "should be ", string1, " and not ", string2);
+      set_oss_content(note_oss, "expected ", string1, " not ", string2);
       results.add_fail("min x", note_oss.str());
     }
     if ((lasheader->max_x + epsilon_x) < lasheader->get_x(lasinventory.max_X)) {
       std::string string1, string2;
       lidardouble2string(string1, lasheader->get_x(lasinventory.max_X), lasheader->x_scale_factor);
       lidardouble2string(string2, lasheader->max_x, lasheader->x_scale_factor);
-      set_oss_content(note_oss, "should be ", string1, " and not ", string2);
+      set_oss_content(note_oss, "expected ", string1, " not ", string2);
       results.add_fail("max x", note_oss.str());
     }
     if ((lasheader->min_y - epsilon_y) > lasheader->get_y(lasinventory.min_Y)) {
       std::string string1, string2;
       lidardouble2string(string1, lasheader->get_y(lasinventory.min_Y), lasheader->y_scale_factor);
       lidardouble2string(string2, lasheader->min_y, lasheader->y_scale_factor);
-      set_oss_content(note_oss, "should be ", string1, " and not ", string2);
+      set_oss_content(note_oss, "expected ", string1, " not ", string2);
       results.add_fail("min y", note_oss.str());
     }
     if ((lasheader->max_y + epsilon_y) < lasheader->get_y(lasinventory.max_Y)) {
       std::string string1, string2;
       lidardouble2string(string1, lasheader->get_y(lasinventory.max_Y), lasheader->y_scale_factor);
       lidardouble2string(string2, lasheader->max_y, lasheader->y_scale_factor);
-      set_oss_content(note_oss, "should be ", string1, " and not ", string2);
+      set_oss_content(note_oss, "expected ", string1, " not ", string2);
       results.add_fail("max y", note_oss.str());
     }
     if ((lasheader->min_z - epsilon_z) > lasheader->get_z(lasinventory.min_Z)) {
       std::string string1, string2;
       lidardouble2string(string1, lasheader->get_z(lasinventory.min_Z), lasheader->z_scale_factor);
       lidardouble2string(string2, lasheader->min_z, lasheader->z_scale_factor);
-      set_oss_content(note_oss, "should be ", string1, " and not ", string2);
+      set_oss_content(note_oss, "expected ", string1, " not ", string2);
       results.add_fail("min z", note_oss.str());
     }
     if ((lasheader->max_z + epsilon_z) < lasheader->get_z(lasinventory.max_Z)) {
       std::string string1, string2;
       lidardouble2string(string1, lasheader->get_z(lasinventory.max_Z), lasheader->z_scale_factor);
       lidardouble2string(string2, lasheader->max_z, lasheader->z_scale_factor);
-      set_oss_content(note_oss, "should be ", string1, " and not ", string2);
+      set_oss_content(note_oss, "expected ", string1, " not ", string2);
       results.add_fail("max z", note_oss.str());
     }
+  }
+
+  // check that the scan direction and edge of flight line are correctly set to 0 or 1
+
+  LASMessage(LAS_VERY_VERBOSE, "check that the scan direction and edge of flight line are correctly set to 0 or 1");
+  
+  if (scan_dir_valid == false) {
+    set_oss_content(note_oss, "invalid scan direction flag (not 0 or 1)");
+    results.add_fail("scan direction", note_oss.str());
+  }
+
+  if (edge_flight_line_valid == false) {
+    set_oss_content(note_oss, "invalid edge of flight line flag: (not 0 or 1)");
+    results.add_fail("edge of flight line", note_oss.str());
+  }
+
+  // check that the classification value is valid according to LAS version 
+
+  LASMessage(LAS_VERY_VERBOSE, "check that the classification value is valid according to LAS version");
+
+  if (classification_valid == false) {
+    set_oss_content(note_oss, "invalid point classification, expected 0–31 for LAS 1.", static_cast<int>(lasheader->version_minor));
+    results.add_fail("classification", note_oss.str());
   }
 
   // check the inventory for invalid return numbers
@@ -878,15 +965,24 @@ void LAScheck::check(ValidationResult& results, std::string& crsdescription, BOO
 
   if (lassummary.active()) {
     if (lassummary.number_of_points_by_return[0] != 0) {
-      set_oss_content(note_oss, "there are ", lassummary.number_of_points_by_return[0], " points with a return number of 0");
-      results.add_warning("return number", note_oss.str());
+      set_oss_content(note_oss, lassummary.number_of_points_by_return[0], " points with return number 0");
+      results.add_warning("number of points by return", note_oss.str());
     }
-    if ((lasheader->version_major == 1) && (lasheader->version_minor < 4)) {
-      for (i = 6; i <= 15; i++) {
-        if (lassummary.number_of_points_by_return[i] != 0) {
-          set_oss_content(note_oss, "there are ", lassummary.number_of_points_by_return[i], " points with a return number of ", i, " for LAS 1.",
-              lasheader->version_minor);
-          results.add_warning("return number", note_oss.str());
+    if ((lasheader->version_major == 1) && (lasheader->version_minor <= 4)) {
+      if (lasheader->point_data_format < 6) {
+        for (i = 6; i <= 7; i++) {
+          if (lassummary.number_of_points_by_return[i] != 0) {
+            set_oss_content(note_oss, lassummary.number_of_points_by_return[i], " points with return number ", i,
+                "; point data format ", static_cast<int>(lasheader->point_data_format));
+            results.add_warning("number of points by return", note_oss.str());
+          }
+        }
+        for (i = 8; i <= 15; i++) {
+          if (lassummary.number_of_points_by_return[i] != 0) {
+            set_oss_content(note_oss, lassummary.number_of_points_by_return[i], " points with return number ", i,
+                "; invalid for point data format ", static_cast<int>(lasheader->point_data_format));
+            results.add_fail("number of points by return", note_oss.str());
+          }
         }
       }
     }
@@ -898,15 +994,24 @@ void LAScheck::check(ValidationResult& results, std::string& crsdescription, BOO
 
   if (lassummary.active()) {
     if (lassummary.number_of_returns[0] != 0) {
-      set_oss_content(note_oss, "there are ", lassummary.number_of_returns[0], " points with a number of returns of given pulse of 0");
-      results.add_warning("number of returns of given pulse", note_oss.str());
+      set_oss_content(note_oss, lassummary.number_of_returns[0], " points with number of returns 0");
+      results.add_warning("return number", note_oss.str());
     }
     if ((lasheader->version_major == 1) && (lasheader->version_minor < 4)) {
-      for (i = 6; i <= 15; i++) {
-        if (lassummary.number_of_returns[i] != 0) {
-          set_oss_content(note_oss, "there are ", lassummary.number_of_returns[i], " points with a number of returns of given pulse of ", i, " for LAS 1.",
-              lasheader->version_minor);
-          results.add_warning("return number", note_oss.str());
+      if (lasheader->point_data_format < 6) {
+        for (i = 6; i <= 7; i++) {
+          if (lassummary.number_of_returns[i] != 0) {
+            set_oss_content(note_oss, lassummary.number_of_returns[i], " points with number of returns ", i, 
+                "; point data format ", static_cast<int>(lasheader->point_data_format));
+            results.add_warning("return number", note_oss.str());
+          }
+        }
+        for (i = 8; i <= 15; i++) {
+          if (lassummary.number_of_returns[i] != 0) {
+            set_oss_content(note_oss, lassummary.number_of_returns[i], " points with number of returns ", i, "; invalid for point data format ",
+                static_cast<int>(lasheader->point_data_format));
+            results.add_fail("return number", note_oss.str());
+          }
         }
       }
     }
@@ -951,7 +1056,7 @@ void LAScheck::check(ValidationResult& results, std::string& crsdescription, BOO
   if (lassummary.active()) {
     if ((lasheader->file_source_ID == 0) && (lassummary.number_of_point_records > 1) && (lassummary.min.point_source_ID == 0) &&
         (lassummary.max.point_source_ID == 0)) {
-      set_oss_content(note_oss, "file source ID in header and point source ID of all ", lassummary.number_of_point_records, " points is ",
+      set_oss_content(note_oss, "header source ID and point source ID of all ", lassummary.number_of_point_records, " points is ",
           lassummary.min.point_source_ID);
       results.add_warning("point source ID", note_oss.str());
     }
@@ -965,8 +1070,8 @@ void LAScheck::check(ValidationResult& results, std::string& crsdescription, BOO
     if ((lasheader->file_source_ID != 0) && (lassummary.number_of_point_records > 1) &&
         ((lasheader->file_source_ID != lassummary.min.point_source_ID) || (lasheader->file_source_ID != lassummary.max.point_source_ID)) &&
         ((lassummary.min.point_source_ID != 0) || (lassummary.max.point_source_ID != 0))) {
-      set_oss_content(note_oss, "file source ID in header is ", lasheader->file_source_ID, " but point source IDs of all ", lassummary.number_of_point_records,
-          " points range from ", lassummary.min.point_source_ID, " to ", lassummary.max.point_source_ID);
+      set_oss_content(note_oss, "header source ID is ", lasheader->file_source_ID, " but point source IDs range from ", lassummary.min.point_source_ID, " to ",
+          lassummary.max.point_source_ID, " across ", lassummary.number_of_point_records, " points");
       results.add_warning("point source ID", note_oss.str());
     }
   }
@@ -1005,7 +1110,7 @@ void LAScheck::check(ValidationResult& results, std::string& crsdescription, BOO
 
   if ((lasheader->point_data_format == 4) || (lasheader->point_data_format == 5) || (lasheader->point_data_format == 9) || (lasheader->point_data_format == 10)) {
     if (!lasheader->vlr_wave_packet_descr) {
-      set_oss_content(note_oss, "waveform point data format used, but no wave packet descriptor VLRs defined in header");
+      set_oss_content(note_oss, "waveform point data without descriptor VLRs");
       results.add_fail("wave packet descriptor", note_oss.str());
     };
 
@@ -1019,7 +1124,7 @@ void LAScheck::check(ValidationResult& results, std::string& crsdescription, BOO
     }
 
     if (!has_any_descriptor) {
-      set_oss_content(note_oss, "waveform point data format used, but wave packet descriptor table is empty");
+      set_oss_content(note_oss, "waveform point data used with empty descriptor table");
       results.add_fail("wave packet", note_oss.str());
     }
   }
@@ -1030,18 +1135,18 @@ void LAScheck::check(ValidationResult& results, std::string& crsdescription, BOO
 
   if (lasheader->version_major == 1 && lasheader->version_minor >= 5) {
     if (lasheader->min_gps_time > lasheader->max_gps_time) {
-      set_oss_content(note_oss, "invalid GPS time range: min ", lasheader->min_gps_time, " is greater than max ", lasheader->max_gps_time);
+      set_oss_content(note_oss, "invalid GPS time range: min ", lasheader->min_gps_time, " > max ", lasheader->max_gps_time);
       results.add_fail("gps time", note_oss.str());
     }
     if (lasheader->point_data_format == 0 || lasheader->point_data_format == 2) {
       if (lasheader->min_gps_time != 0.0 || lasheader->max_gps_time != 0.0) {
-        set_oss_content(note_oss, "Invalid GPS time in header for point data format ", static_cast<int>(lasheader->point_data_format), ": ", lasheader->min_gps_time, " and ",
-            lasheader->max_gps_time, " but must both be 0.0");
+        set_oss_content(note_oss, "Invalid header GPS time for point data format ", static_cast<int>(lasheader->point_data_format), ": ", lasheader->min_gps_time, " and ",
+            lasheader->max_gps_time, "; expected both 0.0");
         results.add_fail("gps time", note_oss.str());
       }
     }
     if (points_outside_gps_time_range > 0) {
-      set_oss_content(note_oss, "there are ", points_outside_gps_time_range, " points outside of the GPS time range specified in the LAS file header");
+      set_oss_content(note_oss, points_outside_gps_time_range, " points outside header GPS time range");
       results.add_fail("gps time", note_oss.str());
     }
   }
@@ -1062,6 +1167,9 @@ LAScheck::LAScheck(const LASheader* lasheader, GeoProjectionConverter* geoprojec
   max_z = lasheader->max_z + lasheader->z_scale_factor;
   points_outside_bounding_box = 0;
   points_outside_gps_time_range = 0;
+  scan_dir_valid = true;
+  edge_flight_line_valid = true;
+  classification_valid = true;
   this->lasheader = lasheader;
   this->geoprojectionconverter = geoprojectionconverter;
 }

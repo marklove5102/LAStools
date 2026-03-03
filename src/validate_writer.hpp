@@ -40,10 +40,15 @@
 
 class ValidateWriter {
  public:
+  enum class ContainerType { 
+      Object, 
+      Array 
+  };
+
   virtual BOOL is_open() const = 0;
   virtual BOOL open(const std::string& key) = 0;
-  virtual BOOL begin(const std::string& key) = 0;
-  virtual BOOL beginsub(const std::string& key) = 0;
+  virtual BOOL begin(const std::string& key, ContainerType type = ContainerType::Object) = 0;
+  virtual BOOL beginsub(const std::string& key, ContainerType type = ContainerType::Object) = 0;
   virtual BOOL write(I32 value) = 0;
   virtual BOOL write(const std::string& value) = 0;
   virtual BOOL write(const std::string& key, I32 value) = 0;
@@ -51,6 +56,7 @@ class ValidateWriter {
   virtual BOOL write(const std::string& variable, const std::string& key, const std::string& note) = 0;
   virtual BOOL endsub(const std::string& key) = 0;
   virtual BOOL end(const std::string& key) = 0;
+  virtual void next_file() = 0;
 
   ValidateWriter(FILE* file);
   virtual ~ValidateWriter() = default;

@@ -597,6 +597,11 @@ BOOL file_exists(const std::string& path);
 /// Get the digits 
 I32 get_digits(F64 scale_factor); 
 
+/// Correctly encapsulates CSV special characters and doubles quotation marks for valid CSV
+std::string escape_csv_value(const std::string& value);
+/// Converts all XML reserved characters in the string to their safe entity codes for valid XML
+std::string escape_xml_value(const std::string& value);
+
 /// Inline template function for resetting and filling an ostringstream
 template <typename... Args>
 inline void set_oss_content(std::ostringstream& oss, Args&&... args) {

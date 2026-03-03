@@ -1,11 +1,11 @@
 /*
 ===============================================================================
 
-  FILE:  validate_json_writer.hpp
+  FILE:  validate_csv_writer.hpp
 
   CONTENTS:
 
-    Writes a LAScheck report to a file in a very simple JSON format.
+    Writes a LAScheck simplified report to a file in a very simple CSV format.
 
   PROGRAMMERS:
 
@@ -24,21 +24,21 @@
 
   CHANGE HISTORY:
 
-    6 February 2026 -- created
+    24 February 2026 -- created
 
 ===============================================================================
 */
-#ifndef JSON_VALIDATION_WRITER_HPP
-#define JSON_VALIDATION_WRITER_HPP
+#ifndef CSV_VALIDATION_WRITER_HPP
+#define CSV_VALIDATION_WRITER_HPP
 
+#include "json.hpp"
 #include "mydefs.hpp"
 #include "validate_writer.hpp"
-#include "json.hpp"
 
-#include <vector>
 #include <stdio.h>
+#include <vector>
 
-class ValidateJsonWriter : public ValidateWriter {
+class ValidateCsvWriter : public ValidateWriter {
  public:
   using ValidateWriter::ValidateWriter;
 
@@ -54,15 +54,17 @@ class ValidateJsonWriter : public ValidateWriter {
   BOOL endsub(const std::string& key) override;
   BOOL end(const std::string& key) override;
 
-  inline void next_file() override { return; };
+  void next_file() override;
 
-  ~ValidateJsonWriter() override = default;
+  ~ValidateCsvWriter() override = default;
 
  private:
-  using Json = nlohmann::ordered_json;
+  std::unordered_map<std::string, std::vector<std::string>> csv_data;
+  std::vector<std::string> key_order;
+  std::map<std::string, std::string> detail_data;
+  size_t current_row = 0;
 
-  Json root;
-  std::vector<Json*> stack;
+  void flush_detail_data();
 };
 
 #endif

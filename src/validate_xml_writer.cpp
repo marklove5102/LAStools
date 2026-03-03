@@ -30,12 +30,12 @@
 */
 #include "validate_xml_writer.hpp"
 
-BOOL ValidteXmlWriter::is_open() const {
+BOOL ValidateXmlWriter::is_open() const {
   return (BOOL)(file != nullptr);
 }
 
 /// Initializes the writer and opens the root element/container identified by the given key
-BOOL ValidteXmlWriter::open(const std::string& key) {
+BOOL ValidateXmlWriter::open(const std::string& key) {
   if (file == nullptr) return FALSE;
 
   indent = 0;
@@ -47,7 +47,7 @@ BOOL ValidteXmlWriter::open(const std::string& key) {
 }
 
 /// Begins a new structured section identified by the given key and makes it the current write context
-BOOL ValidteXmlWriter::begin(const std::string& key) {
+BOOL ValidateXmlWriter::begin(const std::string& key, ContainerType type) {
   if (file == nullptr) return FALSE;
 
   printIndent();
@@ -57,21 +57,23 @@ BOOL ValidteXmlWriter::begin(const std::string& key) {
 }
 
 /// Begins a sub-section within the current section and makes it the active write context
-BOOL ValidteXmlWriter::beginsub(const std::string& key) {
+BOOL ValidateXmlWriter::beginsub(const std::string& key, ContainerType type) {
   return begin(key);
 }
 
 /// Writes a simple value into the current context
-BOOL ValidteXmlWriter::write(const std::string& value) {
+BOOL ValidateXmlWriter::write(const std::string& value) {
   if (file == nullptr) return FALSE;
 
+  std::string escaped_value = escape_xml_value(value);
+
   printIndent();
-  fprintf(file, "%s\n", value.c_str());
+  fprintf(file, "%s\n", escaped_value.c_str());
   return TRUE;
 }
 
 /// Writes a numeric value into the current context
-BOOL ValidteXmlWriter::write(I32 value) {
+BOOL ValidateXmlWriter::write(I32 value) {
   if (file == nullptr) return FALSE;
 
   printIndent();
@@ -80,16 +82,18 @@ BOOL ValidteXmlWriter::write(I32 value) {
 }
 
 /// Writes a key-value pair into the current context
-BOOL ValidteXmlWriter::write(const std::string& key, const std::string& value) {
+BOOL ValidateXmlWriter::write(const std::string& key, const std::string& value) {
   if (file == nullptr) return FALSE;
 
+  std::string escaped_value = escape_xml_value(value);
+
   printIndent();
-  fprintf(file, "<%s>%s</%s>\n", key.c_str(), value.c_str(), key.c_str());
+  fprintf(file, "<%s>%s</%s>\n", key.c_str(), escaped_value.c_str(), key.c_str());
   return TRUE;
 }
 
 /// Writes a numeric key-value pair into the current context
-BOOL ValidteXmlWriter::write(const std::string& key, I32 value) {
+BOOL ValidateXmlWriter::write(const std::string& key, I32 value) {
   if (file == nullptr) return FALSE;
 
   printIndent();
@@ -98,7 +102,7 @@ BOOL ValidteXmlWriter::write(const std::string& key, I32 value) {
 }
 
 /// Writes a structured entry consisting of a variable identifier and optional descriptive note under the given key
-BOOL ValidteXmlWriter::write(const std::string& variable, const std::string& key, const std::string& note) {
+BOOL ValidateXmlWriter::write(const std::string& variable, const std::string& key, const std::string& note) {
   if (file == nullptr) return FALSE;
 
   printIndent();
@@ -109,8 +113,10 @@ BOOL ValidteXmlWriter::write(const std::string& variable, const std::string& key
   fprintf(file, "<variable>%s</variable>\n", variable.c_str());
 
   if (!note.empty()) {
+    std::string escaped_note = escape_xml_value(note);
+
     printIndent();
-    fprintf(file, "<note>%s</note>\n", note.c_str());
+    fprintf(file, "<note>%s</note>\n", escaped_note.c_str());
   }
 
   indent--;
@@ -120,12 +126,12 @@ BOOL ValidteXmlWriter::write(const std::string& variable, const std::string& key
 }
 
 /// Closes the current sub-section and restores the previous write context
-BOOL ValidteXmlWriter::endsub(const std::string& key) {
+BOOL ValidateXmlWriter::endsub(const std::string& key) {
   return end(key);
 }
 
 /// Closes the current section and restores the parent context; finalizes output if the root section is closed
-BOOL ValidteXmlWriter::end(const std::string& key) {
+BOOL ValidateXmlWriter::end(const std::string& key) {
   if (file == nullptr) return FALSE;
 
   indent--;

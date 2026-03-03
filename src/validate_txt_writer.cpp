@@ -46,7 +46,7 @@ BOOL ValidateTxtWriter::open(const std::string& key) {
 }
 
 /// Begins a new structured section identified by the given key and makes it the current write context
-BOOL ValidateTxtWriter::begin(const std::string& key) {
+BOOL ValidateTxtWriter::begin(const std::string& key, ContainerType type) {
   if (file == nullptr) return FALSE;
 
   printIndent();
@@ -57,7 +57,7 @@ BOOL ValidateTxtWriter::begin(const std::string& key) {
 }
 
 /// Begins a sub-section within the current section and makes it the active write context
-BOOL ValidateTxtWriter::beginsub(const std::string& key) {
+BOOL ValidateTxtWriter::beginsub(const std::string& key, ContainerType type) {
   return begin(key);
 }
 

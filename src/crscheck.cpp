@@ -685,51 +685,9 @@ static const StatePlaneTM state_plane_tm_nad83_list[] =
   StatePlaneTM(0,"",-1,-1,-1,-1,-1)
 };
 
-static I32 lidardouble2string(std::string& string, F64 value)
-{
-  string = std::to_string(value);
-
-  std::string::size_type pos = string.find_last_not_of('0');
-  if (pos != std::string::npos) {
-    if (string[pos] == '.') pos--;
-    string.erase(pos + 1);
-  }
-
-  return static_cast<I32>(string.size());
-};
-
 std::string geo_key_not_implemented(int value_offset) {
   return "GeographicTypeGeoKey: look-up for " + std::to_string(value_offset) + " not implemented";
 }
-
-static I32 lidardouble2string(std::string& string, F64 value, F64 scale)
-{
-  I32 decimal_digits = 0;
-  while (scale < 1.0) {
-    scale *= 10.0;
-    decimal_digits++;
-  }
-
-  if (decimal_digits == 0)
-    string = std::to_string(static_cast<I32>(value));
-  else if (decimal_digits >= 1 && decimal_digits <= 8) {
-    char buffer[64];
-    snprintf(buffer, sizeof(buffer), "%.*f", decimal_digits, value);
-    string = buffer;
-  } else {
-    // if decimal_digits > 8, fall back to old function without scale
-    return lidardouble2string(string, value);
-  }
-
-  // Trim zeros at the end as before
-  std::string::size_type len = string.find_last_not_of('0');
-  if (len != std::string::npos) {
-    if (string[len] == '.') len--;
-    string.erase(len + 1);
-  }
-
-  return static_cast<I32>(string.size());
-};
 
 void CRScheck::set_coordinates_in_survey_feet(const BOOL from_geokeys)
 {
@@ -927,7 +885,7 @@ BOOL CRScheck::set_utm_projection(const I32 zone_number, const BOOL northern, co
   utm->utm_zone_number = zone_number;
   utm->utm_zone_letter = ' ';
   utm->utm_northern_hemisphere = northern;
-  utm->name = "UTM zone %d (%s)", zone_number, (utm->utm_northern_hemisphere ? "northern hemisphere" : "southern hemisphere");
+  utm->name = "UTM zone " + std::to_string(zone_number) + " (" + (utm->utm_northern_hemisphere ? "northern hemisphere" : "southern hemisphere") + ")";
   utm->utm_long_origin = (zone_number - 1) * 6 - 180 + 3;  // + 3 puts origin in middle of zone
   set_projection(utm, from_geokeys);
   if (description) {
@@ -14013,7 +13971,6 @@ BOOL CRScheck::set_projection_from_ProjectedCSTypeGeoKey(const U16 value, std::s
 
 BOOL CRScheck::check_geokeys(std::string& description) {
   BOOL has_projection = FALSE;
-  BOOL user_defined_ellipsoid = FALSE;
   I32 user_defined_projection = 0;
   I32 offsetProjStdParallel1GeoKey = -1;
   I32 offsetProjStdParallel2GeoKey = -1;
@@ -14050,7 +14007,6 @@ BOOL CRScheck::check_geokeys(std::string& description) {
       switch (geo_key[i].value_offset)
       {
       case 32767: // user-defined GCS
-        user_defined_ellipsoid = TRUE;
         break;
       case 4001: // GCSE_Airy1830
         ellipsoid = 1;
@@ -14127,7 +14083,6 @@ BOOL CRScheck::check_geokeys(std::string& description) {
       switch (geo_key[i].value_offset)
       {
       case 32767: // user-defined GCS
-        user_defined_ellipsoid = TRUE;
         break;
       case 6202: // Datum_Australian_Geodetic_Datum_1966
       case 6203: // Datum_Australian_Geodetic_Datum_1984
@@ -14460,7 +14415,7 @@ void CRScheck::check(ValidationResult& results, std::string& description, BOOL n
     {
       if (!check_geokeys(description))
       {
-        set_oss_content(note_oss, "the ", lasheader->vlr_geo_keys->number_of_keys, " is a OGC WKT string but its check is not yet implemented geokeys do not properly specify a Coordinate Reference System");
+        set_oss_content(note_oss, "geokey", (lasheader->vlr_geo_keys->number_of_keys > 1 ? "s" : ""),  " do not define a CRS");
         if (no_CRS_fail)
         {
           results.add_warning("CRS", note_oss.str());
@@ -14473,8 +14428,8 @@ void CRScheck::check(ValidationResult& results, std::string& description, BOOL n
       {
         if ((lasheader->vlr_geo_ogc_wkt) && (lasheader->vlr_geo_ogc_wkt != lasheader->file_signature))
         {
-          set_oss_content(note_oss, "inconsistency. the ", lasheader->vlr_geo_keys->number_of_keys,
-              " geokeys tags claim CRS is intentionally *not* specified but non-empty OGC WKT seems to specify it");
+          set_oss_content(note_oss, lasheader->vlr_geo_keys->number_of_keys, " geokey", (lasheader->vlr_geo_keys->number_of_keys > 1 ? "s" : ""), 
+              " claim no CRS, but non-empty OGC WKT specify one");
           if (no_CRS_fail)
           {
             results.add_warning("CRS", note_oss.str());
@@ -14486,8 +14441,8 @@ void CRScheck::check(ValidationResult& results, std::string& description, BOOL n
         }
         else
         {
-          set_oss_content(note_oss, "Coordinate Reference System was intentionally not specified (according to the ", 
-              lasheader->vlr_geo_keys->number_of_keys, " geokey", (lasheader->vlr_geo_keys->number_of_keys > 1 ? "s" : ""));
+          set_oss_content(note_oss, "CRS intentionally not specified (according to ", lasheader->vlr_geo_keys->number_of_keys, " geokey", 
+              (lasheader->vlr_geo_keys->number_of_keys > 1 ? "s" : ""));
           results.add_warning("CRS", note_oss.str());
         }
       }
@@ -14495,20 +14450,20 @@ void CRScheck::check(ValidationResult& results, std::string& description, BOOL n
     if (lasheader->vlr_geo_ogc_wkt) {
       if (lasheader->vlr_geo_ogc_wkt == lasheader->file_signature) {
         if ((projections[0]) && (projections[0]->type != crs::CRS_PROJECTION_NONE)) {
-          set_oss_content(note_oss, "inconsistency. GEOTIFF tags specify CRS but OGC WKT claims it's intentionally *not* specified");
+          set_oss_content(note_oss, "GEOTIFF tags define CRS, but OGC WKT claims non");
           if (no_CRS_fail) {
             results.add_warning("CRS", note_oss.str());
           } else {
             results.add_fail("CRS", note_oss.str());
           }
         } else {
-          set_oss_content(note_oss, "Coordinate Reference System was intentionally not specified (according to the empty OGC WKT)");
+          set_oss_content(note_oss, "CRS intentionally not specified; empty OGC WKT");
           results.add_warning("CRS", note_oss.str());
         }
       } else if (geoprojectionconverter != nullptr && load_proj_library(nullptr, false) == true) {
         // try to use proj lib if loadable
         if (geoprojectionconverter->is_proj_wkt_valid(lasheader->vlr_geo_ogc_wkt) == false) {
-          set_oss_content(note_oss, "invalid OGC WKT: object is not a valid Coordinate Reference System");
+          set_oss_content(note_oss, "invalid OGC WKT: CRS not valid");
           if (no_CRS_fail) {
             results.add_warning("CRS", note_oss.str());
           } else {
@@ -14520,12 +14475,12 @@ void CRScheck::check(ValidationResult& results, std::string& description, BOOL n
           if (!crs_name.empty()) description = crs_name;
         }
       } else {
-        set_oss_content(note_oss, "there is a OGC WKT string but its check is not yet implemented");
+        set_oss_content(note_oss, "OGC WKT found; check not implemented");
         results.add_warning("CRS", note_oss.str());
       }
     }
   } else {
-    set_oss_content(note_oss, "neither GEOTIFF tags nor OGC WKT specify Coordinate Reference System");
+    set_oss_content(note_oss, "No CRS defined by GEOTIFF tags or OGC WKT");
     if (no_CRS_fail)
     {
       results.add_warning("CRS", note_oss.str());
@@ -14541,8 +14496,8 @@ void CRScheck::check(ValidationResult& results, std::string& description, BOOL n
   if (lasheader->version_minor >= 4) {
     // an OCG WKT CRS specification
     if (lasheader->vlr_geo_ogc_wkt == nullptr) {
-      set_oss_content(note_oss, "file with LAS version 1.", static_cast<int>(lasheader->version_minor),
-          " expects specification of a Coordinate Reference System with OGC WKT sting");
+      set_oss_content(note_oss, "LAS 1.", static_cast<int>(lasheader->version_minor),
+          " requires CRS via OGC WKT string");
       if (no_CRS_fail) {
         results.add_warning("CRS", note_oss.str());
       } else {
@@ -14551,8 +14506,7 @@ void CRScheck::check(ValidationResult& results, std::string& description, BOOL n
     }
     // a GEOTIFF tag CRS specification
     if (lasheader->vlr_geo_keys != nullptr) {
-      set_oss_content(note_oss, "file with LAS version 1.", static_cast<int>(lasheader->version_minor),
-          " does not specify a Coordinate Reference System with GEOTIFF tags");
+      set_oss_content(note_oss, "No CRS via GeoTIFF tags in LAS 1.", static_cast<int>(lasheader->version_minor));
       if (no_CRS_fail) {
         results.add_warning("CRS", note_oss.str());
       } else {
@@ -14562,8 +14516,7 @@ void CRScheck::check(ValidationResult& results, std::string& description, BOOL n
   } else {
     // an OCG WKT CRS specification
     if (lasheader->vlr_geo_ogc_wkt != nullptr) {
-      set_oss_content(note_oss, "file with LAS version 1.", static_cast<int>(lasheader->version_minor),
-          " does not specify Coordinate Reference System with OGC WKT string");
+      set_oss_content(note_oss, "No CRS via OGC WKT in LAS 1.", static_cast<int>(lasheader->version_minor));
       if (no_CRS_fail) {
         results.add_warning("CRS", note_oss.str());
       } else {
@@ -14572,8 +14525,8 @@ void CRScheck::check(ValidationResult& results, std::string& description, BOOL n
     }
     // a GEOTIFF tag CRS specification
     if (lasheader->vlr_geo_keys == nullptr) {
-      set_oss_content(note_oss, "file with LAS version 1.", static_cast<int>(lasheader->version_minor),
-          " expects specification of a Coordinate Reference System with GEOTIFF tags");
+      set_oss_content(note_oss, "LAS 1.", static_cast<int>(lasheader->version_minor),
+          " expects CRS via GEOTIFF tags");
       if (no_CRS_fail) {
         results.add_warning("CRS", note_oss.str());
       } else {
