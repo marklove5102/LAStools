@@ -1678,7 +1678,8 @@ BOOL LASreaderTXT::parse_column_description(CHAR** parse_string)
       else if (strcmp(token, "X") == 0) auto_parse_string[i] = 'X';
       else if (strcmp(token, "Y") == 0) auto_parse_string[i] = 'Y';
       else if (strcmp(token, "Z") == 0) auto_parse_string[i] = 'Z';
-      else if ((strcmp(token, "gps_time") == 0) || (strcmp(token, "t") == 0)) auto_parse_string[i] = 't';
+      else if ((strcmp(token, "gps_time") == 0) || (strcmp(token, "t") == 0))
+        auto_parse_string[i] = 't';
       else if ((strcmp(token, "intensity") == 0) || (strcmp(token, "i") == 0))
         auto_parse_string[i] = 'i';
       else if ((strcmp(token, "scan_angle") == 0) || (strcmp(token, "a") == 0))
@@ -1715,6 +1716,8 @@ BOOL LASreaderTXT::parse_column_description(CHAR** parse_string)
         auto_parse_string[i] = 'G';
       else if (strcmp(token, "B") == 0)
         auto_parse_string[i] = 'B';
+      else if (strcmp(token, "I") == 0)
+        auto_parse_string[i] = 'I';
       else if (strcmp(token, "HSV_H") == 0)
       {
         memcpy(&auto_parse_string[i], "(HSV)", 5); i += 4;
