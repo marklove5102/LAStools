@@ -906,7 +906,7 @@ BOOL LASreaderMerged::open()
         }
         // if we merge a file with gps week into a file without it, the week is unknown, so issue a warning. we keep the week-gps unchanged
         if ( ((header.global_encoding & (1 << LAS_TOOLS_GLOBAL_ENCODING_BIT_GPS_TIME_TYPE)) != 0) && 
-             ((lasreader->header.point_data_format & (1 << LAS_TOOLS_GLOBAL_ENCODING_BIT_GPS_TIME_TYPE)) == 0)) 
+             ((lasreader->header.global_encoding & (1 << LAS_TOOLS_GLOBAL_ENCODING_BIT_GPS_TIME_TYPE)) == 0))
         {
             // only relevant if the point format of the current file has gps information (i.e. all but 0 and 2)
             if ((lasreader->header.point_data_format != 0) && (lasreader->header.point_data_format != 2)) {
@@ -916,7 +916,7 @@ BOOL LASreaderMerged::open()
         }
         // if we merge a file without gps week into a file using it, the absolute gps value will be lost, so issue a warning (maybe we could leave gps values untouched?)
         else if (((header.global_encoding & (1 << LAS_TOOLS_GLOBAL_ENCODING_BIT_GPS_TIME_TYPE)) == 0) &&
-            ((lasreader->header.point_data_format & (1 << LAS_TOOLS_GLOBAL_ENCODING_BIT_GPS_TIME_TYPE)) != 0))
+            ((lasreader->header.global_encoding & (1 << LAS_TOOLS_GLOBAL_ENCODING_BIT_GPS_TIME_TYPE)) != 0))
         {
             // only relevant if the point format of the current file has gps information (i.e. all but 0 and 2)
             if ((lasreader->header.point_data_format != 0) && (lasreader->header.point_data_format != 2)) {
@@ -927,9 +927,9 @@ BOOL LASreaderMerged::open()
         }
         // if the gps settings differ, we need to transform them
         else if (  (   ((header.global_encoding & (1 << LAS_TOOLS_GLOBAL_ENCODING_BIT_GPS_TIME_TYPE))) 
-                    != ((lasreader->header.point_data_format & (1 << LAS_TOOLS_GLOBAL_ENCODING_BIT_GPS_TIME_TYPE))) )
+                    != ((lasreader->header.global_encoding & (1 << LAS_TOOLS_GLOBAL_ENCODING_BIT_GPS_TIME_TYPE))) )
                  || (   ((header.global_encoding & (1 << LAS_TOOLS_GLOBAL_ENCODING_BIT_TIME_OFFSET_FLAG))) 
-                     != ((lasreader->header.point_data_format & (1 << LAS_TOOLS_GLOBAL_ENCODING_BIT_TIME_OFFSET_FLAG))) )
+                     != ((lasreader->header.global_encoding & (1 << LAS_TOOLS_GLOBAL_ENCODING_BIT_TIME_OFFSET_FLAG))) )
                  || ( ((header.global_encoding & (1 << LAS_TOOLS_GLOBAL_ENCODING_BIT_TIME_OFFSET_FLAG)) != 0)
                       && (header.time_offset != lasreader->header.time_offset) ) 
                 )
