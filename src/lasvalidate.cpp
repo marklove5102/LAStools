@@ -178,30 +178,16 @@ int main(int argc, char *argv[]) {
     file_out = stdout;
   }
 
+  if (lasreadopener.get_file_name_number() > 1) {
+    halt_on_error(false);
+    LASMessage(LAS_INFO, "more than 1 input files to check. '-errors_ignore' will be used by default for %s", lastool.name.c_str());
+  }
+
   auto arg_local = [&](int& i) -> bool {
     if (strcmp(argv[i], "-quiet") == 0) {
       file_out = nullptr;
-    } else if (strcmp(argv[i], "-lof") == 0) {
-      if ((i+1) >= argc)
-      {
-        laserror("'%s' needs 1 argument: list_of_files", argv[i]);
-      }
-      std::ifstream file(argv[i + 1]);
-      if (!file) {
-        laserror("cannot open '%s'", argv[i + 1]);
-      }
-      std::string line;
-      while (std::getline(file, line)) {
-        // remove trailing whitespace and line endings
-        while (!line.empty() && (line.back() == ' ' || line.back() == '\t' || line.back() == '\n' || line.back() == '\r')) {
-          line.pop_back();
-        }
-
-        if (!line.empty()) {
-          lasreadopener.add_file_name(line.c_str());
-        }
-      }
-      i += 1;
+    } else if (strcmp(argv[i], "-halt_on_errors") == 0) {
+      halt_on_error(true);
     } else if (strcmp(argv[i], "-no_CRS_fail") == 0) {
       no_CRS_fail = TRUE;
     } else if (strcmp(argv[i], "-report_per_file") == 0) {
@@ -435,7 +421,7 @@ int main(int argc, char *argv[]) {
       
       lasreader->close();
       delete lasreader;
-      LASMessage(LAS_VERBOSE, "needed %.2f sec for '%s' %s", taketime() - start_time, lasreadopener.get_file_name(),
+      LASMessage(LAS_INFO, "needed %.2f sec for '%s' %s", taketime() - start_time, lasreadopener.get_file_name(),
           (results.status == ValidationStatus::passed ? "pass" : (results.status == ValidationStatus::failed ? "fail" : "warning")));
       start_time = taketime();
     }

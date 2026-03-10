@@ -63,6 +63,8 @@ private:
   F64 min_x, min_y, min_z;
   F64 max_x, max_y, max_z;
   I64 points_outside_bounding_box;
+  I64 points_return_combination;
+  I64 points_extended_return_combination;
   I64 points_outside_gps_time_range;
   bool scan_dir_valid;
   bool edge_flight_line_valid;

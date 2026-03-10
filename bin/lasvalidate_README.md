@@ -142,6 +142,7 @@ Further examples
 
 ## lasvalidate specific arguments
 
+-halt_on_errors                     : halt on errors, even if more then 1 input files checked
 -no_CRS_fail                        : all CRS (Coordinate Reference System) validation errors are issued as warnings
 -ocsv                               : Simplified output as csv file
 -oxml                               : output as xml file

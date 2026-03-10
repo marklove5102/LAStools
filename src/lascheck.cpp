@@ -96,9 +96,8 @@ void LAScheck::check_parse(const LASpoint* laspoint, ValidationResult& results) 
     const U8 return_number = laspoint->get_return_number();
     const U8 number_of_returns = laspoint->get_number_of_returns();
 
-     if (number_of_returns == 0 || return_number == 0 || return_number > number_of_returns) {
-      set_oss_content(note_oss, "invalid return number (", static_cast<int>(return_number), ") / number of returns (", static_cast<int>(number_of_returns), ") combination");
-      results.add_fail("return number", note_oss.str());
+    if (number_of_returns == 0 || return_number == 0 || return_number > number_of_returns) {
+      points_return_combination++;
     }
   }
   // point_data_format 6–10 : extended return fields (LAS 1.4)
@@ -107,9 +106,7 @@ void LAScheck::check_parse(const LASpoint* laspoint, ValidationResult& results) 
     const U8 extended_number_of_returns = laspoint->get_extended_number_of_returns();
 
     if (extended_number_of_returns == 0 || extended_return_number == 0 || extended_return_number > extended_number_of_returns) {
-      set_oss_content(note_oss, "invalid extended return number (", static_cast<int>(extended_return_number), ") / extended number of returns (", 
-          static_cast<int>(extended_number_of_returns), ") combination");
-      results.add_fail("extended return number", note_oss.str());
+      points_extended_return_combination++;
     }
   }
 
@@ -887,6 +884,24 @@ void LAScheck::check(ValidationResult& results, std::string& crsdescription, BOO
     results.add_fail("bounding box", note_oss.str());
   }
 
+  // check return number / number of returns combination
+
+  LASMessage(LAS_VERY_VERBOSE, "check return number / number of returns combination");
+
+  if (points_return_combination > 0) {
+    set_oss_content(note_oss, points_return_combination, " invalid return number / number of returns combination");
+    results.add_fail("return number", note_oss.str());
+  }
+
+  // check extended return number / extended number of returns combination
+
+  LASMessage(LAS_VERY_VERBOSE, "check extended return number / extended number of returns combination");
+
+  if (points_extended_return_combination > 0) {
+    set_oss_content(note_oss, points_extended_return_combination, " invalid extended return number / extended number of returns combination");
+    results.add_fail("extended return number", note_oss.str());
+  }
+
   if (lasinventory.active()) {
     F64 epsilon_x = 0.5 * lasheader->x_scale_factor;
     F64 epsilon_y = 0.5 * lasheader->y_scale_factor;
@@ -1166,6 +1181,8 @@ LAScheck::LAScheck(const LASheader* lasheader, GeoProjectionConverter* geoprojec
   max_y = lasheader->max_y + lasheader->y_scale_factor;
   max_z = lasheader->max_z + lasheader->z_scale_factor;
   points_outside_bounding_box = 0;
+  points_return_combination = 0;
+  points_extended_return_combination = 0;
   points_outside_gps_time_range = 0;
   scan_dir_valid = true;
   edge_flight_line_valid = true;
