@@ -3163,6 +3163,7 @@ LASreadOpener::LASreadOpener() {
   keep_copc = FALSE;
   pipe_on = FALSE;
   unique = FALSE;
+  is_validate = FALSE;
   file_name_number = 0;
   file_name_allocated = 0;
   file_name_current = 0;

@@ -60,6 +60,7 @@
 #include <cmath>
 #include <filesystem>
 #include <type_traits>
+#include <set>
 
 typedef char CHAR;
 
@@ -601,6 +602,9 @@ I32 get_digits(F64 scale_factor);
 std::string escape_csv_value(const std::string& value);
 /// Converts all XML reserved characters in the string to their safe entity codes for valid XML
 std::string escape_xml_value(const std::string& value);
+
+// Groups consecutive indices from a sorted set into compact ranges.
+std::string compress_indices(const std::set<I32>& indices);
 
 /// Inline template function for resetting and filling an ostringstream
 template <typename... Args>

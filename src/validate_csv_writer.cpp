@@ -100,7 +100,12 @@ BOOL ValidateCsvWriter::write(const std::string& key, const std::string& value) 
 
   std::string escaped_value = escape_csv_value(value);
 
-  column[current_row] = escaped_value;
+  if (last_value_int == TRUE) {
+    column[current_row] = escaped_value;  // no quotes
+    last_value_int = FALSE;
+  } else {
+    column[current_row] = "\"" + escaped_value + "\"";  // strings always quote
+  }
 
   return TRUE;
 }
@@ -108,6 +113,7 @@ BOOL ValidateCsvWriter::write(const std::string& key, const std::string& value) 
 /// Writes a numeric key-value pair into the current context
 BOOL ValidateCsvWriter::write(const std::string& key, I32 value) {
   if (file == nullptr) return FALSE;
+  last_value_int = TRUE;
 
   return write(key, std::to_string(value));
 }

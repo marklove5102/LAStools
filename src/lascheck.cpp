@@ -31,6 +31,8 @@
 
 #include <ctime>
 #include <string.h>
+#include <map>
+#include <set>
 #include <iomanip> 
 #include <cmath>
 
@@ -171,30 +173,28 @@ void LAScheck::check(ValidationResult& results, std::string& crsdescription, BOO
           " but is ", lasheader->global_encoding);
       results.add_fail("global encoding", note_oss.str());
     }
-  }
-  else if ((lasheader->version_major == 1) && (lasheader->version_minor <= 2)) {
+  } else if ((lasheader->version_major == 1) && (lasheader->version_minor <= 2)) {
     if (lasheader->global_encoding > 1) {
       set_oss_content(note_oss, "should be <= 1 for LAS ", static_cast<int>(lasheader->version_major), ".",
           static_cast<int>(lasheader->version_minor), " but is ", lasheader->global_encoding);
       results.add_fail("global encoding", note_oss.str());
     }
-  }
-  else if ((lasheader->version_major == 1) && (lasheader->version_minor <= 3)) {
+  } else if ((lasheader->version_major == 1) && (lasheader->version_minor <= 3)) {
     if (lasheader->global_encoding > 15) {
       set_oss_content(note_oss, "should be <= 15 for LAS ", static_cast<int>(lasheader->version_major), ".", 
           static_cast<int>(lasheader->version_minor), " but is ", lasheader->global_encoding);
       results.add_fail("global encoding", note_oss.str());
     }
   } else if ((lasheader->version_major == 1) && (lasheader->version_minor <= 4)) {
-    if (lasheader->global_encoding > 29) {
+    if (lasheader->global_encoding > 31) {
       set_oss_content(note_oss, "should be <= 31 for LAS ", static_cast<int>(lasheader->version_major), ".", 
           static_cast<int>(lasheader->version_minor), " but is ", lasheader->global_encoding);
       results.add_fail("global encoding", note_oss.str());
     }
   } else if ((lasheader->version_major == 1) && (lasheader->version_minor <= 5)) {
-    if (lasheader->global_encoding > 93) {
-      set_oss_content(note_oss, "invalid in LAS 1.", static_cast<int>(lasheader->version_major), " header: ", lasheader->global_encoding,
-          ". Only bits 0-4 and bit 6");
+    if (lasheader->global_encoding > 127) {
+      set_oss_content(note_oss, "should be <= 127 for LAS ", static_cast<int>(lasheader->version_major), ".", static_cast<int>(lasheader->version_minor),
+          " but is ", lasheader->global_encoding);
       results.add_fail("global encoding", note_oss.str());
     }
   }
@@ -220,8 +220,12 @@ void LAScheck::check(ValidationResult& results, std::string& crsdescription, BOO
     }
   } else {
     if ((lasheader->version_major == 1) && (lasheader->version_minor == 4) && (lasheader->point_data_format >= 6)) {
-      set_oss_content(note_oss, "bit 4 must be set (OGC WKT) for point data format ", static_cast<int>(lasheader->point_data_format), " and LAS 1.",
+      set_oss_content(note_oss, "bit 4 should be set (OGC WKT) for point data format ", static_cast<int>(lasheader->point_data_format), " and LAS 1.",
           static_cast<int>(lasheader->version_minor));
+      results.add_warning("global encoding", note_oss.str());
+    }
+    if (lasheader->version_major == 1 && lasheader->version_minor == 5) {
+      set_oss_content(note_oss, "bit 4 must be set (OGC WKT) in LAS 1.", static_cast<int>(lasheader->version_minor));
       results.add_fail("global encoding", note_oss.str());
     }
   }
@@ -481,8 +485,8 @@ void LAScheck::check(ValidationResult& results, std::string& crsdescription, BOO
 
   if ((lasheader->version_major == 1) && (lasheader->version_minor >= 5)) {
     if (lasheader->point_data_format < min_point_data_format) {
-      set_oss_content(note_oss, "should be between 6-", static_cast<int>(max_point_data_format), " not ", static_cast<int>(lasheader->point_data_format), 
-          " for LAS 1.", static_cast<int>(lasheader->version_minor));
+      set_oss_content(note_oss, "should be between ", static_cast<int>(min_point_data_format), "-", static_cast<int>(max_point_data_format), " not ",
+          static_cast<int>(lasheader->point_data_format), " for LAS 1.", static_cast<int>(lasheader->version_minor));
       results.add_fail("point data format", note_oss.str());
     }
   }
@@ -538,7 +542,7 @@ void LAScheck::check(ValidationResult& results, std::string& crsdescription, BOO
 
   if ((lasheader->version_major == 1) && (lasheader->version_minor < 4)) {
     if (lasheader->point_data_record_length != min_point_data_record_length) {
-      set_oss_content(note_oss, "LAS ", lasheader->version_major, ".", lasheader->version_minor, " allows no extra bytes; expected ", 
+      set_oss_content(note_oss, "LAS ", static_cast<int>(lasheader->version_major), ".", static_cast<int>(lasheader->version_minor), " allows no extra bytes. expected ", 
           min_point_data_record_length, " but found ", lasheader->point_data_record_length);
       results.add_fail("extra bytes", note_oss.str());
     }
@@ -723,13 +727,13 @@ void LAScheck::check(ValidationResult& results, std::string& crsdescription, BOO
 
   LASMessage(LAS_VERY_VERBOSE, "check extended number of points by return in header against the counted inventory");
 
-  if (lassummary.active()) {
+  if (lasinventory.active()) {
     if ((lasheader->version_major == 1) && (lasheader->version_minor >= 4)) {
       for (i = 0; i < 15; i++) {
-        if (lasheader->extended_number_of_points_by_return[i] != static_cast<U64>(lassummary.number_of_points_by_return[i + 1])) {
+        if (lasheader->extended_number_of_points_by_return[i] != static_cast<U64>(lasinventory.extended_number_of_points_by_return[i + 1])) {
           set_oss_content(problem_oss, "number of points by return[", i, "]");
           set_oss_content(note_oss, "number of ", i + 1, (i == 0 ? "st" : (i == 1 ? "nd" : (i == 2 ? "rd" : "th"))), " returns is ",
-              lassummary.number_of_points_by_return[i + 1], " not ", lasheader->extended_number_of_points_by_return[i]);
+              lasinventory.extended_number_of_points_by_return[i + 1], " not ", lasheader->extended_number_of_points_by_return[i]);
           results.add_fail(problem_oss.str(), note_oss.str());
         }
       }
@@ -737,10 +741,10 @@ void LAScheck::check(ValidationResult& results, std::string& crsdescription, BOO
     else
     {
       for (i = 0; i < 5; i++) {
-        if (lasheader->number_of_points_by_return[i] != U32_CLAMP(lassummary.number_of_points_by_return[i + 1])) {
+        if (lasheader->number_of_points_by_return[i] != U32_CLAMP(lasinventory.extended_number_of_points_by_return[i + 1])) {
           set_oss_content(problem_oss, "number of points by return[", i, "]");
           set_oss_content(note_oss, "number of ", i + 1, (i == 0 ? "st" : (i == 1 ? "nd" : (i == 2 ? "rd" : "th"))), " returns is ",
-              U32_CLAMP(lassummary.number_of_points_by_return[i + 1]), " not ", lasheader->number_of_points_by_return[i]);
+              U32_CLAMP(lasinventory.extended_number_of_points_by_return[i + 1]), " not ", lasheader->number_of_points_by_return[i]);
           results.add_fail(problem_oss.str(), note_oss.str());
         }
       }
@@ -889,7 +893,7 @@ void LAScheck::check(ValidationResult& results, std::string& crsdescription, BOO
   LASMessage(LAS_VERY_VERBOSE, "check return number / number of returns combination");
 
   if (points_return_combination > 0) {
-    set_oss_content(note_oss, points_return_combination, " invalid return number / number of returns combination");
+    set_oss_content(note_oss, points_return_combination, " invalid return number / number of returns combinations");
     results.add_fail("return number", note_oss.str());
   }
 
@@ -898,7 +902,7 @@ void LAScheck::check(ValidationResult& results, std::string& crsdescription, BOO
   LASMessage(LAS_VERY_VERBOSE, "check extended return number / extended number of returns combination");
 
   if (points_extended_return_combination > 0) {
-    set_oss_content(note_oss, points_extended_return_combination, " invalid extended return number / extended number of returns combination");
+    set_oss_content(note_oss, points_extended_return_combination, " invalid extended return number / extended number of returns combinations");
     results.add_fail("extended return number", note_oss.str());
   }
 
@@ -1124,23 +1128,37 @@ void LAScheck::check(ValidationResult& results, std::string& crsdescription, BOO
   LASMessage(LAS_VERY_VERBOSE, "check for wrong wave packet indices");
 
   if ((lasheader->point_data_format == 4) || (lasheader->point_data_format == 5) || (lasheader->point_data_format == 9) || (lasheader->point_data_format == 10)) {
-    if (!lasheader->vlr_wave_packet_descr) {
-      set_oss_content(note_oss, "waveform point data without descriptor VLRs");
-      results.add_fail("wave packet descriptor", note_oss.str());
-    };
+    if (lasheader->vlr_wave_packet_descr) {
+      bool has_any_descriptor = false;
+      std::map<std::string, std::set<I32>> wave_aggregated;
 
-    bool has_any_descriptor = false;
 
-    for (i = 1; i < 256; i++) {
-      if (lasheader->vlr_wave_packet_descr[i]) {
-        has_any_descriptor = true;
-        break;
+      for (i = 1; i < 256; i++) {
+        if (lasheader->vlr_wave_packet_descr[i]) {
+          lasheader->vlr_wave_packet_descr[i]->check_wave_packet_descriptor([&](const std::string& msg, LAS_MESSAGE_TYPE type) {
+            //results.add_fail("wave packet descriptor", msg);
+            wave_aggregated[msg].insert(i);
+          });
+          has_any_descriptor = true;
+        }
       }
-    }
 
-    if (!has_any_descriptor) {
-      set_oss_content(note_oss, "waveform point data used with empty descriptor table");
-      results.add_fail("wave packet", note_oss.str());
+      if (!has_any_descriptor) {
+        set_oss_content(note_oss, "waveform point data used with empty descriptor table");
+        results.add_fail("wave packet", note_oss.str());
+      } else {
+        for (const std::pair<const std::string, std::set<I32>>& entry : wave_aggregated) {
+          const std::string& message = entry.first;
+          const std::set<I32>& indices = entry.second;
+
+          std::ostringstream oss_msg;
+          std::string compressed = compress_indices(indices);
+
+          oss_msg << message << compressed;
+
+          results.add_warning("wave packet descriptor", oss_msg.str());
+        }
+      }
     }
   }
 

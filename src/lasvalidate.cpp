@@ -52,7 +52,7 @@
 #include <string.h>
 #include <fstream>
 
-#define VALIDATE_VERSION  260128
+#define VALIDATE_VERSION  260319
 
 class LasTool_lasvalidate : public LasTool {
  private:
@@ -212,6 +212,9 @@ int main(int argc, char *argv[]) {
 
 #ifdef COMPILE_WITH_MULTI_CORE
   if (lastool.cores > 1) {
+    if (one_report_per_file == FALSE) {
+      LASMessage(LAS_WARNING, "more than 1 core will be used. Use '-report_per_file' to get output result files for %s", lastool.name.c_str());
+    }
     if (lasreadopener.get_use_stdin()) {
       LASMessage(LAS_WARNING, "using stdin. ignoring '-cores %d' ...", lastool.cores);
     } else if (lasreadopener.get_file_name_number() < 2) {
@@ -232,6 +235,8 @@ int main(int argc, char *argv[]) {
   if (!lasreadopener.active()) {
     laserror("no input specified");
   }
+  // Do not write log whose checks included in the validation report.
+  lasreadopener.set_validation(TRUE);
 
   const I32 format = laswriteopener.get_format();
   BOOL consol_out = FALSE;

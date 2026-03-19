@@ -321,8 +321,7 @@ BOOL LASwriteOpener::parse(int argc, char* argv[])
     {
       set_format(LAS_TOOLS_FORMAT_LAZ);
       *argv[i]='\0';
-    }
-    else if (strcmp(argv[i], "-ojs") == 0)
+    } else if (strcmp(argv[i], "-ojs") == 0 || strcmp(argv[i], "-ojson") == 0)
     {
       specified = TRUE;
       set_format(LAS_TOOLS_FORMAT_JSON);

@@ -63,6 +63,7 @@ class ValidateCsvWriter : public ValidateWriter {
   std::vector<std::string> key_order;
   std::map<std::string, std::string> detail_data;
   size_t current_row = 0;
+  BOOL last_value_int = FALSE;
 
   void flush_detail_data();
 };
