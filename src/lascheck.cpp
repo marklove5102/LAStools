@@ -218,16 +218,9 @@ void LAScheck::check(ValidationResult& results, std::string& crsdescription, BOO
       set_oss_content(note_oss, "bit 4 not defined for LAS ", static_cast<int>(lasheader->version_major), ".", static_cast<int>(lasheader->version_minor));
       results.add_fail("global encoding", note_oss.str());
     }
-  } else {
-    if ((lasheader->version_major == 1) && (lasheader->version_minor == 4) && (lasheader->point_data_format >= 6)) {
-      set_oss_content(note_oss, "bit 4 should be set (OGC WKT) for point data format ", static_cast<int>(lasheader->point_data_format), " and LAS 1.",
-          static_cast<int>(lasheader->version_minor));
-      results.add_warning("global encoding", note_oss.str());
-    }
-    if (lasheader->version_major == 1 && lasheader->version_minor == 5) {
-      set_oss_content(note_oss, "bit 4 must be set (OGC WKT) in LAS 1.", static_cast<int>(lasheader->version_minor));
-      results.add_fail("global encoding", note_oss.str());
-    }
+  } else if (lasheader->version_major == 1 && lasheader->version_minor == 5) {
+    set_oss_content(note_oss, "bit 4 must be set (OGC WKT) in LAS 1.", static_cast<int>(lasheader->version_minor));
+    results.add_fail("global encoding", note_oss.str());
   }
 
   if (lasheader->global_encoding & 8) {
@@ -531,7 +524,7 @@ void LAScheck::check(ValidationResult& results, std::string& crsdescription, BOO
   }
 
   if (lasheader->point_data_record_length < min_point_data_record_length) {
-    set_oss_content(note_oss, "should be at least ", min_point_data_record_length, " not ", lasheader->point_data_record_length);
+    set_oss_content(note_oss, "should be at least ", min_point_data_record_length, " bytes not ", lasheader->point_data_record_length);
     results.add_fail("point data record length", note_oss.str());
   }
 
@@ -542,8 +535,7 @@ void LAScheck::check(ValidationResult& results, std::string& crsdescription, BOO
 
   if ((lasheader->version_major == 1) && (lasheader->version_minor < 4)) {
     if (lasheader->point_data_record_length != min_point_data_record_length) {
-      set_oss_content(note_oss, "LAS ", static_cast<int>(lasheader->version_major), ".", static_cast<int>(lasheader->version_minor), " allows no extra bytes. expected ", 
-          min_point_data_record_length, " but found ", lasheader->point_data_record_length);
+      set_oss_content(note_oss, "LAS ", static_cast<int>(lasheader->version_major), ".", static_cast<int>(lasheader->version_minor), " allows no extra bytes");
       results.add_fail("extra bytes", note_oss.str());
     }
   } else {
@@ -1187,8 +1179,8 @@ void LAScheck::check(ValidationResult& results, std::string& crsdescription, BOO
   // check header CRS specification
 
   LASMessage(LAS_VERY_VERBOSE, "check header CRS specification");
-  CRScheck crscheck(lasheader, geoprojectionconverter);
-  crscheck.check(results, crsdescription, no_CRS_fail);
+  CRScheck crscheck(lasheader, geoprojectionconverter, results, no_CRS_fail);
+  crscheck.check(crsdescription);
 }
 
 LAScheck::LAScheck(const LASheader* lasheader, GeoProjectionConverter* geoprojectionconverter) {

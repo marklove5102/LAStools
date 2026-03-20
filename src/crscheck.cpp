@@ -13960,9 +13960,25 @@ BOOL CRScheck::set_projection_from_ProjectedCSTypeGeoKey(const U16 value, std::s
       }
       code++;
     }
-    description = "unknown EPSG code " + std::to_string((I32)value) +
-                  ".please email this particular LAS / LAZ file(or at least a lasinfo report of it) to 'lasvalidator@rapidlasso.com' to have this "
-                  "projection added to the CRS check.";
+
+    if (geoprojectionconverter != nullptr && load_proj_library(nullptr, false) == true) {
+      // try to use proj lib if loadable
+      if (geoprojectionconverter->is_proj_epsg_valid(value) == TRUE) {
+        description = "EPSG:" + std::to_string((I32)value);
+        return TRUE;
+      }
+    } else if (value > 0 || value <= 999999) {
+      description = "EPSG:" + std::to_string((I32)value);
+      return TRUE;
+    }
+
+    set_oss_content(note_oss, "invalid EPSG code: CRS not valid");
+    if (no_CRS_fail) {
+      results.add_warning("CRS", note_oss.str());
+    } else {
+      results.add_fail("CRS", note_oss.str());
+    }
+    description = "EPSG:" + std::to_string((I32)value);
     return FALSE;
   }
   LASMessage(LAS_WARNING, "CRScheck::set_projection_from_ProjectedCSTypeGeoKey: %d not implemented", value);
@@ -14406,7 +14422,7 @@ BOOL CRScheck::check_geokeys(std::string& description) {
   return has_projection;
 }
 
-void CRScheck::check(ValidationResult& results, std::string& description, BOOL no_CRS_fail) {
+void CRScheck::check(std::string& description) {
   if (lasheader->vlr_geo_keys || lasheader->vlr_geo_ogc_wkt)
   {
     LASMessage(LAS_VERBOSE, "start with the CRS validation");
@@ -14424,8 +14440,7 @@ void CRScheck::check(ValidationResult& results, std::string& description, BOOL n
         {
           results.add_fail("CRS", note_oss.str());
         }
-      } else if ((projections[0]) && (projections[0]->type == crs::CRS_PROJECTION_NONE))
-      {
+      } else if ((projections[0]) && (projections[0]->type == crs::CRS_PROJECTION_NONE)) {
         if ((lasheader->vlr_geo_ogc_wkt) && (lasheader->vlr_geo_ogc_wkt != lasheader->file_signature))
         {
           set_oss_content(note_oss, lasheader->vlr_geo_keys->number_of_keys, " geokey", (lasheader->vlr_geo_keys->number_of_keys > 1 ? "s" : ""), 
@@ -14479,25 +14494,14 @@ void CRScheck::check(ValidationResult& results, std::string& description, BOOL n
         results.add_warning("CRS", note_oss.str());
       }
     }
-  } else {
-    set_oss_content(note_oss, "No CRS defined by GEOTIFF tags or OGC WKT");
-    if (no_CRS_fail)
-    {
-      results.add_warning("CRS", note_oss.str());
-    }
-    else
-    {
-      results.add_fail("CRS", note_oss.str());
-    }
   }
 
   // Check CRS spezifikation GEOTIFF or OCG WKT CRS depending on the las minor version
 
-  if (lasheader->version_minor >= 4) {
+  if (lasheader->version_minor >= 5) {
     // an OCG WKT CRS specification
     if (lasheader->vlr_geo_ogc_wkt == nullptr) {
-      set_oss_content(note_oss, "LAS 1.", static_cast<int>(lasheader->version_minor),
-          " requires CRS via OGC WKT string");
+      set_oss_content(note_oss, "LAS 1.", static_cast<int>(lasheader->version_minor), " requires CRS via OGC WKT string");
       if (no_CRS_fail) {
         results.add_warning("CRS", note_oss.str());
       } else {
@@ -14513,6 +14517,27 @@ void CRScheck::check(ValidationResult& results, std::string& description, BOOL n
         results.add_fail("CRS", note_oss.str());
       }
     }
+  } else if (lasheader->version_minor == 4) {
+    // is OCG WKT CRS or GEOTIFF tag CRS specification
+    if (lasheader->global_encoding & 16) {
+      if (lasheader->vlr_geo_ogc_wkt == nullptr) {
+        set_oss_content(note_oss, "LAS 1.", static_cast<int>(lasheader->version_minor), " bit 4 is set, requires OGC WKT");
+        if (no_CRS_fail) {
+          results.add_warning("CRS", note_oss.str());
+        } else {
+          results.add_fail("CRS", note_oss.str());
+        }
+      }
+    } else {
+      if (lasheader->vlr_geo_keys == nullptr) {
+        set_oss_content(note_oss, "LAS 1.", static_cast<int>(lasheader->version_minor), " bit 4 is unset, requires GeoTIFF tags");
+        if (no_CRS_fail) {
+          results.add_warning("CRS", note_oss.str());
+        } else {
+          results.add_fail("CRS", note_oss.str());
+        }
+      }
+    }
   } else {
     // an OCG WKT CRS specification
     if (lasheader->vlr_geo_ogc_wkt != nullptr) {
@@ -14525,8 +14550,7 @@ void CRScheck::check(ValidationResult& results, std::string& description, BOOL n
     }
     // a GEOTIFF tag CRS specification
     if (lasheader->vlr_geo_keys == nullptr) {
-      set_oss_content(note_oss, "LAS 1.", static_cast<int>(lasheader->version_minor),
-          " expects CRS via GEOTIFF tags");
+      set_oss_content(note_oss, "LAS 1.", static_cast<int>(lasheader->version_minor), " expects CRS via GEOTIFF tags");
       if (no_CRS_fail) {
         results.add_warning("CRS", note_oss.str());
       } else {
@@ -14536,7 +14560,8 @@ void CRScheck::check(ValidationResult& results, std::string& description, BOOL n
   }
 }
 
-CRScheck::CRScheck(const LASheader* lasheader, GeoProjectionConverter* geoprojectionconverter) {
+CRScheck::CRScheck(const LASheader* lasheader, GeoProjectionConverter* geoprojectionconverter, ValidationResult& results, BOOL no_CRS_fail)
+    : results(results) {
   coordinate_units[0] = coordinate_units[1] = 0;
   elevation_units[0] = elevation_units[1] = 0;
   vertical_epsg[0] = vertical_epsg[1] = 0;
@@ -14544,6 +14569,7 @@ CRScheck::CRScheck(const LASheader* lasheader, GeoProjectionConverter* geoprojec
   projections[0] = projections[1] = 0;
   this->lasheader = lasheader;
   this->geoprojectionconverter = geoprojectionconverter;
+  this->no_CRS_fail = no_CRS_fail;
 };
 
 CRScheck::~CRScheck()

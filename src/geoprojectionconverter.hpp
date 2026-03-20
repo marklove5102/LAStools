@@ -491,6 +491,7 @@ public:
   // using PROJ lib
   void load_proj();
   void set_proj_crs_transform();
+  BOOL is_proj_epsg_valid(unsigned int epsg_code);
   void set_proj_crs_with_epsg(unsigned int& epsg_code, bool source = true);
   void set_proj_crs_with_string(const char* proj_string, bool source = true);
   void set_proj_crs_with_json(const char* json_filename, bool source = true);

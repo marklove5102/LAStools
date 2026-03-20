@@ -113,8 +113,8 @@ public:
 class CRScheck
 {
 public:
-  void check(ValidationResult& results, std::string& description, BOOL no_CRS_fail = FALSE);
-  CRScheck(const LASheader* lasheader, GeoProjectionConverter* geoprojectionconverter);
+  void check(std::string& description);
+  CRScheck(const LASheader* lasheader, GeoProjectionConverter* geoprojectionconverter, ValidationResult& results, BOOL no_CRS_fail);
   ~CRScheck();
 
 private:
@@ -127,6 +127,8 @@ private:
   GeoProjectionConverter* geoprojectionconverter;
   std::ostringstream problem_oss;
   std::ostringstream note_oss;
+  ValidationResult& results;
+  BOOL no_CRS_fail;
 
   void set_coordinates_in_survey_feet(const BOOL from_geokeys);
   void set_coordinates_in_feet(const BOOL from_geokeys);

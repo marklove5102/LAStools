@@ -894,12 +894,6 @@ std::string escape_xml_value(const std::string& value) {
       case '>':
         out += "&gt;";
         break;
-      case '"':
-        out += "&quot;";
-        break;
-      case '\'':
-        out += "&apos;";
-        break;
       default:
         out += c;
         break;

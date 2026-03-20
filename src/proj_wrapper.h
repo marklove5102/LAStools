@@ -53,6 +53,9 @@ PJ_CONTEXT* my_proj_context_create();
 /// Destroy context
 void my_proj_context_destroy(PJ_CONTEXT* ctx);
 
+/// Destroy crs
+void my_proj_destroy(PJ* crs);
+
 /// Create CRS object
 PJ* my_proj_create(PJ_CONTEXT* ctx, const char* crs);
 
