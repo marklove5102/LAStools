@@ -376,6 +376,19 @@ inline unsigned int swap_endian_uint(unsigned int input) {
   return output;
 }
 
+// Checks whether the point (x, y) within a rectangle (x1,y1,x2,y2)
+inline BOOL is_inside_rectangle(F64 x, F64 y, const F64 rect[4]) {
+  return (x >= rect[0] && x <= rect[2] && y >= rect[1] && y <= rect[3]);
+}
+
+// Checks whether the point (x, y) within a circle with a given center and radius (center_x, center_y, radius)
+inline BOOL is_inside_circle(F64 x, F64 y, const F64 circle[3]) {
+  const double dx = x - circle[0];
+  const double dy = y - circle[1];
+
+  return (dx*dx + dy*dy) <= (circle[2] * circle[2]);
+}
+
 #if defined(_WIN32)
 wchar_t* UTF8toUTF16(const char* utf8);
 wchar_t* ANSItoUTF16(const char* ansi);
