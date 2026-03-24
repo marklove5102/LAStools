@@ -321,11 +321,19 @@ BOOL LASwriteOpener::parse(int argc, char* argv[])
     {
       set_format(LAS_TOOLS_FORMAT_LAZ);
       *argv[i]='\0';
-    }
-    else if (strcmp(argv[i], "-ojs") == 0)
+    } else if (strcmp(argv[i], "-ojs") == 0 || strcmp(argv[i], "-ojson") == 0)
     {
       specified = TRUE;
       set_format(LAS_TOOLS_FORMAT_JSON);
+      *argv[i] = '\0';
+    } 
+    else if (strcmp(argv[i], "-oxml") == 0) {
+      specified = TRUE;
+      set_format(LAS_TOOLS_FORMAT_XML);
+      *argv[i] = '\0';
+    } else if (strcmp(argv[i], "-ocsv") == 0) {
+      specified = TRUE;
+      set_format(LAS_TOOLS_FORMAT_CSV);
       *argv[i] = '\0';
     }
     else if (strcmp(argv[i],"-otxt") == 0)
@@ -541,6 +549,14 @@ void LASwriteOpener::set_file_name(const CHAR* file_name)
         {
           format = LAS_TOOLS_FORMAT_JSON;
         }
+        else if (strstr(extension, "xml") || strstr(extension, "XML"))  // json
+        {
+          format = LAS_TOOLS_FORMAT_XML;
+        } 
+        else if (strstr(extension, "csv") || strstr(extension, "CSV"))  // csv
+        {
+          format = LAS_TOOLS_FORMAT_CSV;
+        }
         else // assume ascii output
         {
           format = LAS_TOOLS_FORMAT_TXT;
@@ -610,6 +626,24 @@ void LASwriteOpener::set_file_name(const CHAR* file_name)
         this->file_name[len] = 'o';
         len++;
         this->file_name[len] = 'n';
+      } 
+      else if (format == LAS_TOOLS_FORMAT_XML)  // xml
+      {
+        len++;
+        this->file_name[len] = 'x';
+        len++;
+        this->file_name[len] = 'm';
+        len++;
+        this->file_name[len] = 'l';
+      } 
+      else if (format == LAS_TOOLS_FORMAT_CSV)  // csv
+      {
+        len++;
+        this->file_name[len] = 'c';
+        len++;
+        this->file_name[len] = 's';
+        len++;
+        this->file_name[len] = 'v';
       }
       else // assume ascii output
       {
@@ -661,7 +695,8 @@ void LASwriteOpener::set_native(BOOL native)
 
 BOOL LASwriteOpener::set_format(I32 format)
 {
-  if ((format < LAS_TOOLS_FORMAT_DEFAULT) || ((format > LAS_TOOLS_FORMAT_TXT) && format != LAS_TOOLS_FORMAT_JSON))
+  if ((format < LAS_TOOLS_FORMAT_DEFAULT) ||
+      ((format > LAS_TOOLS_FORMAT_TXT) && format != LAS_TOOLS_FORMAT_JSON && format != LAS_TOOLS_FORMAT_XML && format != LAS_TOOLS_FORMAT_CSV))
   {
     return FALSE;
   }
@@ -709,12 +744,24 @@ BOOL LASwriteOpener::set_format(I32 format)
         file_name[len+3] = 'l';
 	    }
       else if (format == LAS_TOOLS_FORMAT_JSON)
-        {
-          file_name[len+1] = 'j';
-          file_name[len+2] = 's';
-          file_name[len+3] = 'o';
-          file_name[len+4] = 'n';
-        }
+      {
+        file_name[len+1] = 'j';
+        file_name[len+2] = 's';
+        file_name[len+3] = 'o';
+        file_name[len+4] = 'n';
+      } 
+      else if (format == LAS_TOOLS_FORMAT_XML) 
+      {
+        file_name[len + 1] = 'x';
+        file_name[len + 2] = 'm';
+        file_name[len + 3] = 'l';
+      } 
+      else if (format == LAS_TOOLS_FORMAT_CSV) 
+      {
+        file_name[len + 1] = 'c';
+        file_name[len + 2] = 's';
+        file_name[len + 3] = 'v';
+      }
       else if (format == LAS_TOOLS_FORMAT_TXT)
 	    {
         file_name[len+1] = 't';
@@ -764,6 +811,14 @@ BOOL LASwriteOpener::set_format(const CHAR* format)
     else if (strstr(format, "json") || strstr(format, "JSON"))  // json
     {
       return set_format(LAS_TOOLS_FORMAT_JSON);
+    } 
+    else if (strstr(format, "xml") || strstr(format, "XML"))  // xml
+    {
+      return set_format(LAS_TOOLS_FORMAT_XML);
+    } 
+    else if (strstr(format, "csv") || strstr(format, "CSV"))  // csv
+    {
+      return set_format(LAS_TOOLS_FORMAT_CSV);
     }
     else // assume ascii output
     {
@@ -945,6 +1000,17 @@ void LASwriteOpener::make_file_name(const CHAR* file_name, I32 file_number)
     this->file_name[len + 1] = 's';
     this->file_name[len + 2] = 'o';
     this->file_name[len + 3] = 'n';
+  } 
+  else if (format == LAS_TOOLS_FORMAT_XML) {
+    this->file_name[len] = 'x';
+    this->file_name[len + 1] = 'm';
+    this->file_name[len + 2] = 'l';
+  } 
+  else if (format == LAS_TOOLS_FORMAT_CSV) 
+  {
+    this->file_name[len] = 'c';
+    this->file_name[len + 1] = 's';
+    this->file_name[len + 2] = 'v';
   }
   else // if (format == LAS_TOOLS_FORMAT_TXT)
   {
@@ -990,6 +1056,10 @@ void LASwriteOpener::make_file_name(const CHAR* file_name, I32 file_number)
       else if (format == LAS_TOOLS_FORMAT_JSON)
       {
         this->file_name = LASCopyString("temp.json");
+      } 
+      else if (format == LAS_TOOLS_FORMAT_JSON) 
+      {
+        this->file_name = LASCopyString("temp.xml");
       }
       else // if (format == LAS_TOOLS_FORMAT_TXT)
       {
@@ -1078,11 +1148,19 @@ BOOL LASwriteOpener::format_was_specified() const
   return specified;
 }
 
-static const CHAR* LAS_TOOLS_FORMAT_NAMES[12] = {"las", "las", "laz", "bin", "qi", "wrl", "txt", "shp", "asc", "bil", "flt", "json"};
+static const CHAR* LAS_TOOLS_FORMAT_NAMES[16] = {"las", "las", "laz", "bin", "qi",  "wrl",  "txt", "shp",
+                                                 "ply", "asc", "bil", "flt", "dtm", "json", "xml", "csv"};
 
 const CHAR* LASwriteOpener::get_format_name() const
 {
-  return LAS_TOOLS_FORMAT_NAMES[get_format()];
+  I32 idx = get_format();
+  constexpr int num_formats = sizeof(LAS_TOOLS_FORMAT_NAMES) / sizeof(LAS_TOOLS_FORMAT_NAMES[0]);
+
+  if (idx >= 0 && idx < num_formats) {
+    return LAS_TOOLS_FORMAT_NAMES[idx];
+  } else {
+    return "unknown";
+  }
 }
 
 I32 LASwriteOpener::get_format() const
@@ -1113,6 +1191,14 @@ I32 LASwriteOpener::get_format() const
     else if (HasFileExt(std::string(file_name), ".json"))  // json
     {
       return LAS_TOOLS_FORMAT_JSON;
+    } 
+    else if (HasFileExt(std::string(file_name), ".xml"))  // xml
+    {
+      return LAS_TOOLS_FORMAT_XML;
+    }
+    else if (HasFileExt(std::string(file_name), ".csv"))  // csv
+    {
+      return LAS_TOOLS_FORMAT_CSV;
     }
     else // assume ascii output
     {

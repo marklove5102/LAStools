@@ -427,6 +427,12 @@ class LASLIB_DLL LASreadOpener {
   BOOL get_use_stdin() {
     return use_stdin;
   };
+  BOOL is_validation() {
+    return this->is_validate;
+  };
+  void set_validation(BOOL is_validate) {
+    this->is_validate = is_validate;
+  };
   LASreadOpener();
   ~LASreadOpener();
 
@@ -497,6 +503,7 @@ class LASLIB_DLL LASreadOpener {
   BOOL pipe_on;
   BOOL use_stdin;
   BOOL unique;
+  BOOL is_validate;
 
   // optional extras
   LASindex* index;

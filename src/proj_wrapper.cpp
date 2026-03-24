@@ -64,6 +64,11 @@ void my_proj_context_destroy(PJ_CONTEXT* ctx) {
   proj_context_destroy_ptr(ctx);
 }
 
+/// Wrapper for proj_context_destroy
+void my_proj_destroy(PJ* crs) {
+  proj_destroy_ptr(crs);
+}
+
 /// Wrapper for proj_create
 PJ* my_proj_create(PJ_CONTEXT* ctx, const char* crs) {
   return proj_create_ptr ? proj_create_ptr(ctx, crs) : nullptr;

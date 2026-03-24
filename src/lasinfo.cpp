@@ -295,7 +295,7 @@ public:
       } else if (strcmp(argv[i], "-otxt") == 0) {
         laswriteopener.set_appendix("_info");
         laswriteopener.set_format("txt");
-      } else if (strcmp(argv[i], "-ojs") == 0) {
+      } else if (strcmp(argv[i], "-ojs") == 0 || strcmp(argv[i], "-ojson") == 0) {
         laswriteopener.set_appendix("_info");
         laswriteopener.set_format("json");
       } else if (strcmp(argv[i], "-nh") == 0 || strcmp(argv[i], "-no_header") == 0) {

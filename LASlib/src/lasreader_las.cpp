@@ -46,6 +46,13 @@
 #include <stdlib.h>
 #include <string.h>
 #include <cstdint>
+#include <map>
+#include <set>
+
+struct WaveInfo {
+  LAS_MESSAGE_TYPE type;
+  std::set<I32> indices;
+};
 
 BOOL LASreaderLAS::open(const char* file_name, I32 io_buffer_size, BOOL peek_only, U32 decompress_selective)
 {
@@ -320,7 +327,8 @@ BOOL LASreaderLAS::open(ByteStreamIn* stream, BOOL peek_only, U32 decompress_sel
   {
     if (header.header_size < 235)
     {
-      LASMessage(LAS_WARNING, "for LAS 1.%d header_size should at least be 235 but it is only %d", header.version_minor, header.header_size);
+      if (opener && opener->is_validation() == FALSE)
+        LASMessage(LAS_WARNING, "for LAS 1.%d header_size should at least be 235 but it is only %d", header.version_minor, header.header_size);
       header.user_data_in_header_size = header.header_size - 227;
     }
     else
@@ -439,6 +447,7 @@ BOOL LASreaderLAS::open(ByteStreamIn* stream, BOOL peek_only, U32 decompress_sel
   if (header.number_of_variable_length_records)
   {
     header.vlrs = (LASvlr*)calloc(header.number_of_variable_length_records, sizeof(LASvlr));
+    std::map<std::string, WaveInfo> wave_aggregated;
 
     for (i = 0; i < header.number_of_variable_length_records; i++)
     {
@@ -858,22 +867,14 @@ BOOL LASreaderLAS::open(ByteStreamIn* stream, BOOL peek_only, U32 decompress_sel
               LASMessage(LAS_WARNING, "variable length record payload for wave packet descr %d is %d instead of 26 bytes", idx, (I32)header.vlrs[i].record_length_after_header);
             }
             header.vlr_wave_packet_descr[idx] = (LASvlr_wave_packet_descr*)header.vlrs[i].data;
-            if ((header.vlr_wave_packet_descr[idx]->getBitsPerSample() != 8) && (header.vlr_wave_packet_descr[idx]->getBitsPerSample() != 16))
-            {
-              LASMessage(LAS_WARNING, "bits per sample for wave packet descr %d is %d instead of 8 or 16", idx, (I32)header.vlr_wave_packet_descr[idx]->getBitsPerSample());
+            if (opener && opener->is_validation() == FALSE) {
+              header.vlr_wave_packet_descr[idx]->check_wave_packet_descriptor([&](const std::string& msg, LAS_MESSAGE_TYPE type) { 
+                WaveInfo& info = wave_aggregated[msg];
+                info.type = type;
+                info.indices.insert(i);
+              });
             }
-            if (header.vlr_wave_packet_descr[idx]->getNumberOfSamples() == 0)
-            {
-              LASMessage(LAS_WARNING, "number of samples for wave packet descr %d is zero", idx);
-            }
-            if (header.vlr_wave_packet_descr[idx]->getNumberOfSamples() > 8096)
-            {
-              LASMessage(LAS_WARNING, "number of samples of %u for wave packet descr %d is with unusually large", header.vlr_wave_packet_descr[idx]->getNumberOfSamples(), idx);
-            }
-            if (header.vlr_wave_packet_descr[idx]->getTemporalSpacing() == 0)
-            {
-              LASMessage(LAS_WARNING, "temporal spacing for wave packet descr %d is zero", idx);
-            }
+
 /*
             // fix for RiPROCESS export error
             if (idx == 1)
@@ -936,6 +937,18 @@ BOOL LASreaderLAS::open(ByteStreamIn* stream, BOOL peek_only, U32 decompress_sel
           LASMessage(LAS_WARNING, "no payload for copc (not specification-conform).");
         }
       }
+    }
+    // List of all recorded waveform warnings
+    for (const std::pair<const std::string, WaveInfo>& entry : wave_aggregated) {
+      const std::string& message = entry.first;
+      const WaveInfo& info = entry.second;
+
+      std::ostringstream oss_msg;
+      std::string compressed = compress_indices(info.indices);
+
+      oss_msg << message << compressed;
+
+      LASMessage(info.type, oss_msg.str().c_str());
     }
   }
 

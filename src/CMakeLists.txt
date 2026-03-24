@@ -13,10 +13,23 @@ include_directories(../LASzip/src)
 include_directories(../LASlib/inc)
 include_directories(.)
 
+set(LASVALIDATE_EXTRA_SOURCES
+    crscheck.cpp
+    format_writer.cpp
+    lascheck.cpp
+    validate_writer.cpp
+    validate_json_writer.cpp
+    validate_xml_writer.cpp
+    validate_txt_writer.cpp
+    validate_csv_writer.cpp
+)
+
+
 set(GEOPROJECTION_TARGETS
   laszip
   lasinfo
   lasprecision
+  lasvalidate
   txt2las
   las2las
   lasmerge
@@ -30,8 +43,26 @@ set(STANDALONE_TARGETS
 set(ALL_TARGETS ${GEOPROJECTION_TARGETS} ${STANDALONE_TARGETS})
 
 foreach(TARGET ${GEOPROJECTION_TARGETS})
-  add_executable(${TARGET} ${TARGET}.cpp wktparser.cpp geoprojectionconverter.cpp proj_loader.cpp proj_wrapper.cpp)
-endforeach(TARGET)
+  if(${TARGET} STREQUAL "lasvalidate")
+    add_executable(${TARGET}
+      ${TARGET}.cpp
+      wktparser.cpp
+      geoprojectionconverter.cpp
+      proj_loader.cpp
+      proj_wrapper.cpp
+      ${LASVALIDATE_EXTRA_SOURCES}
+    )
+  else()
+    add_executable(${TARGET}
+      ${TARGET}.cpp
+      wktparser.cpp
+      geoprojectionconverter.cpp
+      proj_loader.cpp
+      proj_wrapper.cpp
+    )
+  endif()
+endforeach()
+
 
 foreach(TARGET ${STANDALONE_TARGETS})
   add_executable(${TARGET} ${TARGET}.cpp proj_loader.cpp proj_wrapper.cpp)

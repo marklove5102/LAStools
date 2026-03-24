@@ -8675,6 +8675,34 @@ bool GeoProjectionConverter::set_dtm_projection_parameters(
 }
 
 /// IMPORTANT: The Proj lib must be installed and loaded to use this functionality.
+/// check whether the EPSG code is valid using the proj library
+BOOL GeoProjectionConverter::is_proj_epsg_valid(unsigned int epsg_code) {
+  if (epsg_code == 0 || epsg_code > 999999) return FALSE;
+
+  PJ_CONTEXT* proj_ctx = my_proj_context_create();
+
+  if (!proj_ctx) return FALSE;
+
+  // Register log handler
+  proj_log_func_ptr(proj_ctx, nullptr, myCustomProjErrorHandler);
+
+  char crs_epsg[20];
+  snprintf(crs_epsg, sizeof(crs_epsg), "EPSG:%u", epsg_code);
+
+  PJ* proj_crs = my_proj_create(proj_ctx, crs_epsg);
+
+  // Check whether the CRS is valid
+  if (!proj_crs) {
+    my_proj_context_destroy(proj_ctx);
+    return FALSE;
+  }
+  my_proj_destroy(proj_crs);
+  my_proj_context_destroy(proj_ctx);
+
+  return TRUE;
+}
+
+/// IMPORTANT: The Proj lib must be installed and loaded to use this functionality.
 /// create PROJ object using the epsg code (for source=true or target=false)
 /// Parse and validate the input epsg and set the ProjParameter crs
 void GeoProjectionConverter::set_proj_crs_with_epsg(unsigned int& epsg_code, bool source /*=true*/) {
@@ -8951,6 +8979,47 @@ void GeoProjectionConverter::set_proj_crs_with_file_header_wkt(const char* wktCo
     projParameters.set_header_wkt_representation(projParameters.proj_target_crs);
     LASMessage(LAS_VERY_VERBOSE, "the PROJ target object was successfully created");
   }
+}
+
+/// IMPORTANT: The Proj lib must be installed and loaded to use this functionality.
+/// create PROJ object using the wkt content e.g. from the file header
+/// validate the input wkt content for las header
+bool GeoProjectionConverter::is_proj_wkt_valid(const char* wktContent) {
+  if (!wktContent) return false;
+
+  projParameters.proj_ctx = my_proj_context_create();
+
+  if (!projParameters.proj_ctx) return false;
+
+  PJ* proj_crs = my_proj_create(projParameters.proj_ctx, wktContent);
+  // if PJ object is invalid
+  if (proj_crs == nullptr) return false;
+
+  //MyPJ_TYPE proj_type = my_proj_get_type(proj_crs);
+  //// if PJ type ist not a CRS
+  //if (proj_type.type != MY_PJ_TYPE_CRS) return false;
+  if (proj_is_crs_ptr(proj_crs) == false) return false;
+
+  return true;
+}
+
+/// IMPORTANT: The Proj lib must be installed and loaded to use this functionality.
+/// create PROJ object using the wkt content e.g. from the file header
+/// validate the input wkt content for las header
+std::string GeoProjectionConverter::get_proj_crs_name_from_wkt(const char* wktContent) {
+  std::string crs_name;
+
+  projParameters.proj_ctx = my_proj_context_create();
+
+  if (!projParameters.proj_ctx) return "";
+
+  PJ* proj_crs = my_proj_create(projParameters.proj_ctx, wktContent);
+  // if PJ object is invalid
+  if (proj_crs == nullptr) return "";
+
+  crs_name = proj_get_name_ptr(proj_crs);
+
+  return crs_name;
 }
 
 /// load the proj lib and set the source and target PROJ objects

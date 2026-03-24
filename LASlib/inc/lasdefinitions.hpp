@@ -58,6 +58,7 @@
 #include <string.h>
 #include <stdlib.h>
 #include <cassert>
+#include <functional>
 
 #include "mydefs.hpp"
 #include "lasvlr.hpp"
@@ -81,6 +82,8 @@
 #define LAS_TOOLS_FORMAT_FLT    11
 #define LAS_TOOLS_FORMAT_DTM    12
 #define LAS_TOOLS_FORMAT_JSON   13
+#define LAS_TOOLS_FORMAT_XML    14 
+#define LAS_TOOLS_FORMAT_CSV    15 
 
 #define LAS_TOOLS_GLOBAL_ENCODING_BIT_GPS_TIME_TYPE    0
 #define LAS_TOOLS_GLOBAL_ENCODING_BIT_WDP_INTERNAL     1
@@ -164,6 +167,28 @@ public:
   inline void setDigitizerOffset(F64 offset) {((F64*)&(data[18]))[0] = offset;};
 private:
   U8 data[26];
+
+public:
+  void check_wave_packet_descriptor(std::function<void(const std::string&, LAS_MESSAGE_TYPE)> emit) {
+    std::ostringstream oss_msg;
+
+    if ((getBitsPerSample() != 8) && (getBitsPerSample() != 16)) {
+      oss_msg << "bits per sample is " << (I32)getBitsPerSample() << " instead of 8 or 16 for wave packet descr ";
+      emit(oss_msg.str(), LAS_WARNING);
+    }
+    if (getNumberOfSamples() == 0) {
+      oss_msg << "number of samples is zero for wave packet descr ";
+      emit(oss_msg.str(), LAS_WARNING);
+    }
+    if (getNumberOfSamples() > 8096) {
+      oss_msg << "number of samples " << getNumberOfSamples() << " is unusually large for wave packet descr ";
+      emit(oss_msg.str(), LAS_WARNING);
+    }
+    if (getTemporalSpacing() == 0) {
+      oss_msg << "temporal spacing is zero for wave packet descr ";
+      emit(oss_msg.str(), LAS_WARNING);
+    }
+  }
 };
 
 class LASLIB_DLL LASvlr_copc_info
