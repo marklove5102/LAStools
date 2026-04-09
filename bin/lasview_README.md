@@ -217,7 +217,7 @@ reads around 10 million subsampled lidar points and displays in 11 steps
 -steps [n]                          : visualize incremental loading of points from file in [n] steps (default=50)  
 -stop_at_point [n]                  : stop loading after [n] points  
 -subcircle [n]                      : prior to creating TIN with [t] replace each point with 8 segment circle of radius [n]  
--subseq [m] [n]                     : only load subsequence from point [m] to [n]  
+-subseq [m] [n]                     : only load subsequence from point [m] to ([n]-1)  
 -suppress_classification            : do not decompress classification for native-compressed LAS 1.4 point types 6 or higher  
 -suppress_intensity                 : do not decompress intensity for native-compressed LAS 1.4 point types 6 or higher  
 -suppress_point_source              : do not decompress point source ID for native-compressed LAS 1.4 point types 6 or higher  

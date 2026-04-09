@@ -333,7 +333,7 @@ Further examples
 -set_vlr_user_id [m] [n]            : set user id of vlr [m] to [n]  
 -start_at_point [n]                 : start loading from point position [n]  
 -stop_at_point [n]                  : stop loading after [n] points  
--subseq [m] [n]                     : only load subsequence from point [m] to [n]  
+-subseq [m] [n]                     : only load subsequence from point [m] to ([n]-1)  
 -suppress_classification            : do not decompress classification for native-compressed LAS 1.4 point types 6 or higher  
 -suppress_extra_bytes               : do not decompress "extra bytes" for native-compressed LAS 1.4 point types 6 or higher  
 -suppress_flags                     : do not decompress flags for native-compressed LAS 1.4 point types 6 or higher  
